@@ -8,13 +8,14 @@ with open('LICENSE') as f:
     license = f.read()
 
 setup(
-    # name='sample',
+    # TODO
+    # name='',
     # version='0.1.0',
-    # description='Sample package for Python-Guide.org',
+    # description='',
     # long_description=README.md,
-    # author='Jeffrey Chow',
-    # author_email='jeffreychow97@gmail.com',
+    # author='',
+    # author_email='',
     # url='',
-    # license='LICENSE',
+    # license='',
     # packages=
 )
