@@ -6,7 +6,7 @@ import re
 from sqlalchemy import create_engine
 import requests
 import datetime
-from common.constants import TEAM_ABBRV, MONTHS_ABBRV
+from common.constants import TEAM_ABBRV, MONTHS_ABBRV, MONTHS
 
 """
 The scraper should be responsible for generating data frames to form the database. Adding entities to the database should be done
@@ -164,7 +164,7 @@ class Scraper:
                 player_code = player_code_base + str(player_number).zfill(2)
                 
                 url = f'https://www.basketball-reference.com/players/{last_initial}/{player_code}.html'
-                html = requests.get(url, headers={'User-Agent': USER_AGENT})
+                html = requests.get(url, headers={'User-Agent': self.__USER_AGENT})
                 soup = BeautifulSoup(html.text, 'lxml')
                 
                 birth = [item['data-birth'] for item in soup.find_all('span', attrs={'data-birth' : True})][0]
@@ -173,7 +173,7 @@ class Scraper:
                 else:
                     player_number += 1
             except HTTPError:
-                logging.exception("This player does not exist.")
+                print("This player does not exist.")
                 break
         return player_code
 
