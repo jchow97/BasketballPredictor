@@ -1,7 +1,9 @@
+from urllib.parse import _ParseResultBytesBase
 from sqlalchemy import Column, Integer, String, DateTime, DECIMAL, create_engine
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import ForeignKey
+from scripts.Scraper import Scraper
 
 Base = declarative_base()
 
@@ -12,6 +14,7 @@ class Game(Base):
     season_id = Column(Integer, ForeignKey("season.id"))
     type = Column(Integer, ForeignKey("game_type.id"))
     start_datetime = Column(DateTime)
+    game_code = Column(String)
 
 class GamePlayerLog(Base):
     __tablename__ = "game_player_log"
@@ -227,11 +230,11 @@ class Team(Base):
     ats_away_losses = Column(Integer)
     ats_away_ties = Column(Integer)
 
-class TeamHomeAway(Base):
-    __tablename__ = "team_home_away"
+class TeamHomeAwayType(Base):
+    __tablename__ = "team_home_away_type"
     
     id = Column(Integer, primary_key=True)
-    name = Column(String)
+    type = Column(String)
 
 class TeamStats(Base):
     __tablename__ = "team_stats"
@@ -293,8 +296,95 @@ class TeamAdvancedStats(Base):
     arena = Column(String)
     attendance = Column(String)
 
-engine = create_engine(f'postgresql+psycopg2://jeffreychow:@localhost:5432/mock_nba_database')
 
-session = Session(engine)
-Base.metadata.drop_all(engine)
-Base.metadata.create_all(engine)
+def initialize_database(year, database='mock_nba_database'):
+    engine = create_engine(f'postgresql+psycopg2://jeffreychow:@localhost:5432/{database}')
+    session = Session(engine)
+
+    # Create database tables
+    Base.metadata.drop_all(engine)
+    Base.metadata.create_all(engine)
+
+    populate_type_tables(engine, session)
+
+    s = Scraper()
+
+    schedule_df = s.scrape_nba_season(year)
+
+    #
+    season = Season (
+        year = f"{year}",
+        friendly_name = f"NBA Season {year - 1}-{year}",
+        season_start = s.to_postgres_date(schedule_df['Date'].iloc[0]),
+        season_end = get_season_end_date(schedule_df)
+    )
+    
+    session.add(season)
+    session.commit()
+
+    # Query for season id.
+    curr_season_id = session.query(Season.id).filter(Season.year == f"{year}").first()
+    
+    for row in schedule_df.index:
+        game_datetime = schedule_df['Date'][row]
+
+        game = Game (
+            season_id = curr_season_id,
+            # TODO: scrape playoff games too
+            type = 1,
+            start_datetime = s.to_postgres_date(game_datetime),
+            game_code = s.__get_game_code(game_datetime, schedule_df['Home/Neutral'][row])
+        )
+        session.add(game)
+        session.commit()
+
+    session.commit()
+
+# HELPER FUNCTIONS
+
+"""
+Get the end-date for the regular season.
+
+@param schedule_dataframe - the data frame of the season schedule.
+@return string of date in postgres format.
+"""
+def get_season_end_date(schedule_dataframe) -> str:
+    pass
+
+"""
+Populate the type tables with known types.
+Type tables: game_type, player_stats_type, team_home_away_type, team_stats_type
+
+@param engine - SQLAlchemy engine.
+@param session - SQLAlchemy session.
+@return None
+"""
+def populate_type_tables(engine, session) -> None:
+    # Add Game Types TODO: Expand playoffs into CQF, CSF, CF, F.
+    game_types = ["Preseason", "Regular Season", "Play-In Game", "Playoffs"]
+    for gt in game_types:
+        gt_object = GameType(type=gt)
+        session.add(gt_object)
+        session.commit()
+    
+    # Add Player Types
+    player_stats_types = ["Regular Season", "Regular Season Career", "Playoffs", "Playoffs Career"]
+    for pst in player_stats_types:
+        pst_object = PlayerStatsType(type=pst)
+        session.add(pst_object)
+        session.commit()
+
+    # Add Team Home/Away Types
+    team_home_away_types = ["Home", "Away"]
+    for that in team_home_away_types:
+        that_object = TeamHomeAwayType(type=that)
+        session.add(that_object)
+        session.commit()
+
+    # Add Team Stats Types
+    team_stats_types = ["Team", "Team/g", "Opponent", "Opponent/g"]
+    for tst in team_stats_types:
+        tst_object = TeamStatsType(type=tst)
+        session.add(tst_object)
+        session.commmit()
+
