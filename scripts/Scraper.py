@@ -102,6 +102,103 @@ class Scraper:
             return None
 
     """
+    Scrape the nba match and returns a collection of data frames from the match.
+    
+    @param game_code - game_code string for the website
+    @return Collection of pandas DataFrames
+    """
+    def scrape_nba_match(self, game_code) -> list[pd.DataFrame]:
+        # TODO: take the match scraper from old scraper, then remove the unneeded parts.
+        try:
+            url = f'https://www.basketball-reference.com/boxscores/{game_code}.html'
+            # html = urlopen(url)
+            html = requests.get(url, headers={'User-Agent': self.__USER_AGENT})
+            soup = BeautifulSoup(html.text, 'lxml')
+        except HTTPError as e:
+            print("Error occured!")
+            print(e)
+        else:
+
+            # TODO: Line Score and Four Factors Headers + Tables
+            comments = soup.find_all(string=lambda text: isinstance(text, Comment))
+            ls = -1 # index for line_score comment
+            ff = -1 # index for four_factors comment
+            for i in range(len(comments)):
+                if 'line_score' in comments[i]:
+                    ls = i
+                elif 'four_factors' in comments[i]:
+                    ff = i
+            comment_ls_soup = BeautifulSoup(comments[ls], 'lxml')
+            comment_ff_soup = BeautifulSoup(comments[ff], 'lxml')
+
+            ls_headers = [th.get_text() for th in comment_ls_soup.find('table').find_all('th')[1:-2]]
+            # ['\xa0', '1', '2', '3', '4', 'T'] Optional: OT
+            ff_headers = [th.get_text() for th in comment_ff_soup.find('table').find_all('th')[4:-2]]
+            # ['\xa0', 'Pace', 'eFG%', 'TOV%', 'ORB%', 'FT/FGA', 'ORtg']
+            
+            # Change blank line score header to "Team"
+            ls_headers[0] = "Team"
+
+            line_score_table = comment_ls_soup.find('table').find_all('tr')[2:]
+            four_factors_table = comment_ff_soup.find('table').find_all('tr')[2:]
+
+            ls_rows = self.parse_table_rows(line_score_table)
+            ff_rows = self.parse_table_rows(four_factors_table, 1)
+
+            ls_df = pd.DataFrame(ls_rows, columns=ls_headers)
+            ff_df = pd.DataFrame(ff_rows, columns=ff_headers)
+            game_summary = pd.concat([ls_df, ff_df], axis=1)
+
+            # Scrape for Basic Box Score Stat Headers and Advanced Box Score Stat Headers and merge into one big header list.
+            box_headers_basic = [th.get_text() for th in soup.find('table').find_all('th')][2:23]
+            box_headers_basic[0] = 'Players'
+
+            if len(ls_headers) > 6: #checking if there was OT need to make dynamic (e.g. 2OT, 3OT)
+                i = len(ls_headers) - 6
+                box_headers_adv = [th.get_text() for th in soup.find_all('table')[7 + i].find_all('th')][4:19]
+            else:
+                box_headers_adv = [th.get_text() for th in soup.find_all('table')[7].find_all('th')][4:19]
+
+            # Add player code to basic box header.
+            box_headers_basic.insert(1, "Player Code")
+            
+
+            visitor_basic_table = []
+            visitor_adv_table = []
+            home_basic_table = []
+            home_adv_table = []
+            
+            if len(ls_headers) > 6:
+                i = len(ls_headers) - 6
+                visitor_basic_table = soup.find_all('table')[0].find_all('tr')
+                visitor_adv_table = soup.find_all('table')[7 + i].find_all('tr')
+                home_basic_table = soup.find_all('table')[8 + i].find_all('tr')
+                home_adv_table = soup.find_all('table')[15 + (2 * i)].find_all('tr')
+            else:
+                visitor_basic_table = soup.find_all('table')[0].find_all('tr')
+                visitor_adv_table = soup.find_all('table')[7].find_all('tr')
+                home_basic_table = soup.find_all('table')[8].find_all('tr')
+                home_adv_table = soup.find_all('table')[15].find_all('tr')
+
+            # Scrape the values in each row for the visitor team in both Basic and Advanced Box Scores.
+            # TODO parse_row_data() is too simple/standard for this table at the moment.
+            v_rows_basic, v_rows_adv = self.__parse_box_scores(visitor_basic_table, visitor_adv_table)
+
+            v_basic_df = pd.DataFrame(v_rows_basic, columns=box_headers_basic)
+            v_adv_df = pd.DataFrame(v_rows_adv, columns=box_headers_adv)
+            v_box_score = pd.concat([v_basic_df, v_adv_df], axis=1)
+
+            # Scrape the values in each row for the home team in both Basic and Advanced Box Scores.
+            h_rows_basic, h_rows_adv = self.__parse_box_scores(home_basic_table, home_adv_table)
+
+            h_basic_df = pd.DataFrame(h_rows_basic, columns=box_headers_basic)
+            h_adv_df = pd.DataFrame(h_rows_adv, columns=box_headers_adv)
+            h_box_score = pd.concat([h_basic_df, h_adv_df], axis=1)
+
+            return game_summary, h_box_score, v_box_score
+
+
+    """
     Scrapes one NBA Team and returns a collection of data frames on the team page.
 
     @param team - team name (e.g. TODO)
@@ -114,35 +211,63 @@ class Scraper:
     """
     Scrapes an NBA Player and returns a collection of data frames on the player page.
 
-    @param name - Name of the player.
-    @param birth_date - birth_date of the player.
+    @param player_code - unique player code used to find their stats page.
     @return pandas DataFrame of player stats.
     """
-    def scrape_nba_player(self, name, birth_date) -> pd.DataFrame:
-        pass
+    def scrape_nba_player(self, player_code) -> pd.DataFrame:
+        last_initial = player_code[0]
+        url = f'https://www.basketball-reference.com/players/{last_initial}/{player_code}.html'
+        
+        try:
+            html = requests.get(url, headers={'User-Agent': self.__USER_AGENT})
+            soup = BeautifulSoup(html.text, 'lxml')
+        except HTTPError as e:
+            print("Error occured!")
+            print(e)
+        else:
+            pg_stats = soup.find(id='per_game')
+
+            if pg_stats == None:
+                print("This guy isn't important enough to scrape.")
+                return
+            
+            # TODO filtering table in line above, then 'tr' then 'th' may be a better way to get table headers for other functions.
+            pgstats_headers = [th.get_text() for th in pg_stats.find('tr').find_all('th')]
+            # ['Season', 'Age', 'Tm', 'Lg', 'Pos', 'G', 'GS', 'MP', 'FG', 'FGA', 'FG%', '3P', '3PA', '3P%', '2P', '2PA', 
+            # '2P%', 'eFG%', 'FT', 'FTA', 'FT%', 'ORB','DRB', 'TRB', 'AST', 'STL', 'BLK', 'TOV', 'PF', 'PTS']
+
+            pgstats_headers = self.format_headers(pgstats_headers)
+            
+            pgstats_table = pg_stats.find_all('tr')[1:]
+            pgstats_rows = []
+
+            for i in range(len(pgstats_table)):
+                try:
+                    number = pgstats_table[i].find('th').get_text()
+                    data = [td.get_text() for td in pgstats_table[i].find_all('td')]
+                    data.insert(0, number)
+                except AttributeError:
+                    # for DNP seasons
+                    data = [td.get_text() for td in pgstats_table[i].find_all('td')]
+                    dnp = ['DNP'] * 27
+                    data = data + dnp
+                pgstats_rows.append(data)
+
+            pg_stats_df = pd.DataFrame(pgstats_rows, columns=pgstats_headers)
+
+            return pg_stats_df
 
     # HELPER FUNCTIONS
 
     """
-    Get Player Code based on trying to access their webpage on Basketball Reference.
+    Get Player Code Base (e.g. lillada of lillada01)
 
     @param name - Name of the player.
-    @param bd - Birth date of the player (e.g. 'January 1, 2022')
     @return str - player code that was determined.
     """
-    def __get_player_code(self, name, bd) -> str:
+    def __get_player_code_base(self, name) -> str:
         player_code_base = ''
         player_name = name.split()
-        player_birth = bd.split()
-        
-        p_month = MONTHS[player_birth[0]]
-        p_day = player_birth[1][:-1] # to remove the comma
-        if len(p_day) == 1:
-            p_day = '0' + p_day
-        p_year = player_birth[2]
-
-        # use birth code to find and finalize player code.
-        birth_code = p_year + '-' + p_month + '-' + p_day
 
         ln_length = min(len(player_name[1]), 5)
         for i in range(ln_length):
@@ -154,28 +279,7 @@ class Scraper:
 
         player_code_base = player_code_base.lower()
 
-        last_initial = player_name[1][0].lower()
-        player_found = False
-        player_number = 1
-        player_code = ''
-
-        while not player_found:
-            try:
-                player_code = player_code_base + str(player_number).zfill(2)
-                
-                url = f'https://www.basketball-reference.com/players/{last_initial}/{player_code}.html'
-                html = requests.get(url, headers={'User-Agent': self.__USER_AGENT})
-                soup = BeautifulSoup(html.text, 'lxml')
-                
-                birth = [item['data-birth'] for item in soup.find_all('span', attrs={'data-birth' : True})][0]
-                if birth == birth_code:
-                    player_found = True
-                else:
-                    player_number += 1
-            except HTTPError:
-                print("This player does not exist.")
-                break
-        return player_code
+        return player_code_base
 
 
     """
@@ -229,3 +333,31 @@ class Scraper:
         game_code = game_date_year + game_date_month + game_date_day + '0' + TEAM_ABBRV[home_team]
 
         return game_code
+
+    """
+    Parse table data for team basic and advanced box scores.
+
+    @param basic_table - Team's basic box score.
+    @param adv_table - Team's advanced box score.
+    @return basic_rows, adv_rows - Team's nested list of row data for advanced and box score respectively.
+    TODO add return signature. Not sure how to signature 2 return values.
+    """
+    def __parse_box_scores(self, basic_table, adv_table):
+        basic_rows = []
+        adv_rows = []
+        for i in range(2, len(basic_table)):
+            if (i != 7):
+                player = basic_table[i].find('th').get_text()
+                basic_data = [td.get_text() for td in basic_table[i].find_all('td')]
+                basic_data.insert(0, player)
+                
+                player_code_base = self.__get_player_code_base(player)
+                player_code = basic_table[i].select(f"a[href*={player_code_base}]")
+                basic_data.insert(1, player_code)
+
+                adv_data = [td.get_text() for td in adv_table[i].find_all('td')[1:]]
+                basic_rows.append(basic_data)
+                adv_rows.append(adv_data)
+        return basic_rows, adv_rows
+
+
