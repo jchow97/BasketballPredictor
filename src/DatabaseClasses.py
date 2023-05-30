@@ -66,7 +66,7 @@ class GameTeam(Base):
     id = Column(Integer, primary_key=True)
     game_id = Column(Integer, ForeignKey("game.id"))
     team_id = Column(Integer, ForeignKey("team.id"))
-    team_home_away_type = Column(Integer, ForeignKey("team_home_away.id"))
+    team_home_away_type = Column(Integer, ForeignKey("team_home_away_type.id"))
     game_team_log_id = Column(Integer, ForeignKey("game_team_log.id"))
     spread = Column(DECIMAL)
     odds = Column(DECIMAL)
@@ -224,7 +224,7 @@ class Team(Base):
     streak = Column(Integer)
     last_ten_wins = Column(Integer)
     last_ten_losses = Column(Integer)
-    
+
     ats_wins = Column(Integer)
     ats_losses = Column(Integer)
     ats_ties = Column(Integer)
@@ -237,7 +237,7 @@ class Team(Base):
 
 class TeamHomeAwayType(Base):
     __tablename__ = "team_home_away_type"
-    
+
     id = Column(Integer, primary_key=True)
     type = Column(String)
 
@@ -305,15 +305,14 @@ class TeamAdvancedStats(Base):
 
 
 def initialize_database(year, database='mock_nba_database'):
+    # TODO: Locally re-create an empty database
+
     engine = create_engine(f'postgresql+psycopg2://jeffreychow:@localhost:5432/{database}')
     session = Session(engine)
 
     # Create database tables
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
-
-    populate_type_tables(session)
-    populate_team_tables(session)
 
     s = Scraper()
 
@@ -327,12 +326,15 @@ def initialize_database(year, database='mock_nba_database'):
         season_start = s.to_postgres_date(schedule_df['Date'].iloc[0]),
         season_end = get_season_end_date(schedule_df)
     )
-    
+
     session.add(season)
     session.flush()
 
+    populate_type_tables(session)
+    populate_team_tables(session, season.id)
+
     # Query for season id.
-    
+
     for i in schedule_df.index:
         game_datetime = schedule_df['Date'][i]
         home_team = schedule_df['Home/Neutral'][i]
@@ -441,7 +443,7 @@ def initialize_database(year, database='mock_nba_database'):
             free_throws_per_field_goal_attempt = home_team_game_summary['FT/FGA'],
         )
         session.add(game_home_team_log)
-        
+
         for i in home_box.index[:-1]:
             player_name = home_box['Players'][i]
             player_code = home_box['Player Code'][i]
@@ -523,7 +525,7 @@ def initialize_database(year, database='mock_nba_database'):
 
         game_away_team_log = GameTeamLog (
             game_team_id = game_away_team.id,
-            
+
             total_points = away_team_game_summary['T'],
             first_quarter_points = away_team_game_summary['1'],
             second_quarter_points = away_team_game_summary['2'],
@@ -640,7 +642,7 @@ def initialize_database(year, database='mock_nba_database'):
     # TODO: Improve PlayerStats table to be able to cover all the other tables on the player page (e.g. per game, total, per 36, playoffs for each, etc).
     for player in session.query(Player).all():
         player_stats_df = s.scrape_nba_player(player.unique_code)
-        
+
         for i in player_stats_df.index[:-1]:
             player_stats = PlayerStats(
                 player_id = player.id,
@@ -674,7 +676,7 @@ def initialize_database(year, database='mock_nba_database'):
             )
 
             session.add(player_stats)
-        
+
         player_stats_regular_season_totals = player_stats_df.iloc[-1]
         player_stats_reg_career = PlayerStats(
                 player_id = player.id,
@@ -734,7 +736,7 @@ def populate_type_tables(session: Session) -> None:
         gt_object = GameType(type=gt)
         session.add(gt_object)
         session.commit()
-    
+
     # Add Player Types
     player_stats_types = ["Regular Season", "Regular Season Career", "Playoffs", "Playoffs Career"]
     for pst in player_stats_types:
@@ -754,7 +756,7 @@ def populate_type_tables(session: Session) -> None:
     for tst in team_stats_types:
         tst_object = TeamStatsType(type=tst)
         session.add(tst_object)
-        session.commmit()
+        session.commit()
 
 """
 Populate the team tables with the current teams for the season and initialize their related tables.
@@ -764,10 +766,9 @@ Team tables: team, team_stats, team_advanced_stats
 @return None
 """
 def populate_team_tables(session: Session, season_id) -> None:
-    
+
     for team in CURRENT_TEAMS:
         season = session.query(Season.year).filter(Season.id == season_id).first()
-
         t = Team (
             season_id = season_id,
             name = team,
@@ -783,7 +784,7 @@ def populate_team_tables(session: Session, season_id) -> None:
             streak = 0,
             last_ten_wins = 0,
             last_ten_losses = 0,
-            
+
             ats_wins = 0,
             ats_losses = 0,
             ats_ties = 0,
@@ -796,7 +797,7 @@ def populate_team_tables(session: Session, season_id) -> None:
         )
         session.add(t)
         session.flush()
-        
+
         for i in range(len(4)):
             ts = TeamStats(
                 team_id = t.id,
@@ -854,7 +855,7 @@ def populate_team_tables(session: Session, season_id) -> None:
 Convert a datestring to the postgres date.
 @param date_string
 @return string in PostgreSQL format.
-"""   
+"""
 def to_postgres_date(date_string: str) -> str:
     # Parse the input string into a datetime object
     date = datetime.datetime.strptime(date_string, '%a, %b %d, %Y')
@@ -865,7 +866,7 @@ def to_postgres_date(date_string: str) -> str:
 Convert a datestring to the postgres date.
 @param datetime - Python datetime object.
 @return string in PostgreSQL format.
-"""   
+"""
 def to_postgres_datetime(datetime: datetime) -> str:
     # Parse the input string into a datetime object
     return datetime.strftime("%Y/%m/%d %H:%M:%S")
