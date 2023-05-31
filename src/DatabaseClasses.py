@@ -5,6 +5,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import ForeignKey
 from scripts.Scraper import Scraper
 from common.constants import CURRENT_TEAMS, TEAM_ABBRV
+import psycopg2
 
 Base = declarative_base()
 
@@ -305,13 +306,20 @@ class TeamAdvancedStats(Base):
 
 
 def initialize_database(year, database='mock_nba_database'):
-    # TODO: Locally re-create an empty database
+    # TODO: Figure out how to use drop tables and create tables in code below through SQLAlchemy,
+    #  instead of dropping the entire database.
+    conn = psycopg2.connect("dbname=nba_master user=jeffreychow")
+    conn.autocommit = True
+    cur = conn.cursor()
+    cur.execute(f'DROP DATABASE IF EXISTS {database};')
+    cur.execute(f'CREATE DATABASE {database};')
+    conn.close()
 
     engine = create_engine(f'postgresql+psycopg2://jeffreychow:@localhost:5432/{database}')
     session = Session(engine)
 
-    # Create database tables
-    Base.metadata.drop_all(engine)
+    # Drop old and create new database tables
+    # Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
 
     s = Scraper()
@@ -319,7 +327,6 @@ def initialize_database(year, database='mock_nba_database'):
     schedule_df = s.scrape_nba_season(year)
     players = dict()
 
-    #
     season = Season (
         year = f"{year}",
         friendly_name = f"NBA Season {year - 1}-{year}",
