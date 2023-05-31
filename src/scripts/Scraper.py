@@ -294,9 +294,10 @@ class Scraper:
     @return string - formatted date string.
     """
 
-    def to_postgres_date(self, date_string: str) -> str:
+    def to_postgres_date(self, date_string: str):
         # Parse the input string into a datetime object
         date = datetime.datetime.strptime(date_string, '%a, %b %d, %Y')
+
         # Return the date in the PostgreSQL date format
         return date.strftime('%Y-%m-%d')
 
