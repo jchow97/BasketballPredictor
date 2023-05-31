@@ -9,6 +9,7 @@ import psycopg2
 
 Base = declarative_base()
 
+
 class Game(Base):
     __tablename__ = "game"
 
@@ -17,6 +18,7 @@ class Game(Base):
     type = Column(Integer, ForeignKey("game_type.id"))
     start_datetime = Column(DateTime)
     game_code = Column(String)
+
 
 class GamePlayerLog(Base):
     __tablename__ = "game_player_log"
@@ -61,6 +63,7 @@ class GamePlayerLog(Base):
     defensive_rating = Column(DECIMAL)
     box_plus_minus = Column(DECIMAL)
 
+
 class GameTeam(Base):
     __tablename__ = "game_team"
 
@@ -74,6 +77,7 @@ class GameTeam(Base):
     money_line_odds = Column(DECIMAL)
     over_under_odds = Column(DECIMAL)
 
+
 class GameTeamLog(Base):
     __tablename__ = "game_team_log"
 
@@ -85,7 +89,8 @@ class GameTeamLog(Base):
     second_quarter_points = Column(Integer)
     third_quarter_points = Column(Integer)
     fourth_quarter_points = Column(Integer)
-    overtime_points = Column(String) # going to store a list of = Column(Integer)s, then we can store infinite overtime_points
+    overtime_points = Column(
+        String)  # going to store a list of = Column(Integer)s, then we can store infinite overtime_points
 
     minutes_played = Column(Integer)
     field_goals = Column(Integer)
@@ -126,11 +131,13 @@ class GameTeamLog(Base):
     pace = Column(DECIMAL)
     free_throws_per_field_goal_attempt = Column(DECIMAL)
 
+
 class GameType(Base):
     __tablename__ = "game_type"
 
     id = Column(Integer, primary_key=True)
-    type = Column(String) # preseason, regular season, play-in, playoffs (CQF, CSF, CF, F)
+    type = Column(String)  # preseason, regular season, play-in, playoffs (CQF, CSF, CF, F)
+
 
 class Player(Base):
     __tablename__ = "player"
@@ -142,12 +149,13 @@ class Player(Base):
     friendly_name = Column(String)
     birth_date = Column(DateTime)
 
+
 class PlayerStats(Base):
     __tablename__ = "player_stats"
 
     id = Column(Integer, primary_key=True)
     player_id = Column(Integer, ForeignKey("player.id"))
-    type = Column(Integer, ForeignKey("player_stats_type.id")) # 0: season 1: career
+    type = Column(Integer, ForeignKey("player_stats_type.id"))  # 0: season 1: career
     season = Column(String)
     age = Column(Integer)
 
@@ -177,11 +185,13 @@ class PlayerStats(Base):
     personal_fouls = Column(DECIMAL)
     points = Column(DECIMAL)
 
+
 class PlayerStatsType(Base):
     __tablename__ = "player_stats_type"
 
     id = Column(Integer, primary_key=True)
     type = Column(String)
+
 
 class PlayerTeam(Base):
     __tablename__ = "player_team"
@@ -191,6 +201,7 @@ class PlayerTeam(Base):
     team_id = Column(Integer, ForeignKey("team.id"))
     start_date = Column(DateTime)
     end_date = Column(DateTime)
+
 
 class Season(Base):
     __tablename__ = "season"
@@ -204,6 +215,7 @@ class Season(Base):
     season_end = Column(DateTime)
     playoffs_start = Column(DateTime)
     playoffs_end = Column(DateTime)
+
 
 class Team(Base):
     __tablename__ = "team"
@@ -236,11 +248,13 @@ class Team(Base):
     ats_away_losses = Column(Integer)
     ats_away_ties = Column(Integer)
 
+
 class TeamHomeAwayType(Base):
     __tablename__ = "team_home_away_type"
 
     id = Column(Integer, primary_key=True)
     type = Column(String)
+
 
 class TeamStats(Base):
     __tablename__ = "team_stats"
@@ -270,11 +284,13 @@ class TeamStats(Base):
     personal_fouls = Column(DECIMAL)
     points = Column(DECIMAL)
 
+
 class TeamStatsType(Base):
     __tablename__ = "team_stats_type"
 
     id = Column(Integer, primary_key=True)
     type = Column(String)
+
 
 class TeamAdvancedStats(Base):
     __tablename__ = "team_advanced_stats"
@@ -327,11 +343,11 @@ def initialize_database(year, database='mock_nba_database'):
     schedule_df = s.scrape_nba_season(year)
     players = dict()
 
-    season = Season (
-        year = f"{year}",
-        friendly_name = f"NBA Season {year - 1}-{year}",
-        season_start = s.to_postgres_date(schedule_df['Date'].iloc[0]),
-        season_end = get_season_end_date(schedule_df)
+    season = Season(
+        year=f"{year}",
+        friendly_name=f"NBA Season {year - 1}-{year}",
+        season_start=s.to_postgres_date(schedule_df['Date'].iloc[0]),
+        season_end=get_season_end_date(schedule_df)
     )
 
     session.add(season)
@@ -347,12 +363,12 @@ def initialize_database(year, database='mock_nba_database'):
         home_team = schedule_df['Home/Neutral'][i]
         away_team = schedule_df['Visitor/Neutral'][i]
 
-        game = Game (
-            season_id = season.id,
+        game = Game(
+            season_id=season.id,
             # TODO: scrape playoff games too
-            type = 1,
-            start_datetime = s.to_postgres_date(game_datetime),
-            game_code = s.__get_game_code(game_datetime, home_team)
+            type=1,
+            start_datetime=s.to_postgres_date(game_datetime),
+            game_code=s.__get_game_code(game_datetime, home_team)
         )
         session.add(game)
         session.flush()
@@ -392,256 +408,258 @@ def initialize_database(year, database='mock_nba_database'):
         away_box_team_stats = away_box.iloc[-1]
         away_team_game_summary = game_summary.iloc[0]
 
-        game_home_team = GameTeam (
-            game_id = game.id,
-            team_id = session.query(Team.id).filter(Team.team_name == home_team),
-            team_home_away_type = 1
+        game_home_team = GameTeam(
+            game_id=game.id,
+            team_id=session.query(Team.id).filter(Team.team_name == home_team),
+            team_home_away_type=1
         )
         session.add(game_home_team)
         session.flush()
 
-        game_home_team_log = GameTeamLog (
-            game_team_id = game_home_team.id,
+        game_home_team_log = GameTeamLog(
+            game_team_id=game_home_team.id,
 
-            total_points = home_team_game_summary['T'],
-            first_quarter_points = home_team_game_summary['1'],
-            second_quarter_points = home_team_game_summary['2'],
-            third_quarter_points = home_team_game_summary['3'],
-            fourth_quarter_points = home_team_game_summary['4'],
-            overtime_points = None, #TODO: Configure OT calculation.
+            total_points=home_team_game_summary['T'],
+            first_quarter_points=home_team_game_summary['1'],
+            second_quarter_points=home_team_game_summary['2'],
+            third_quarter_points=home_team_game_summary['3'],
+            fourth_quarter_points=home_team_game_summary['4'],
+            overtime_points=None,  # TODO: Configure OT calculation.
 
-            minutes_played = home_box_team_stats['MP'],
-            field_goals = home_box_team_stats['FG'],
-            field_goal_attempts = home_box_team_stats['FGA'],
-            field_goal_pct = home_box_team_stats['FG%'],
-            three_pointers = home_box_team_stats['3P'],
-            three_point_attempts = home_box_team_stats['3PA'],
-            three_point_pct = home_box_team_stats['3P%'],
-            free_throws = home_box_team_stats['FT'],
-            free_throw_attempts = home_box_team_stats['FTA'],
-            free_throw_pct = home_box_team_stats['FT%'],
-            offensive_rebounds = home_box_team_stats['ORB'],
-            defensive_rebounds = home_box_team_stats['DRB'],
-            total_rebounds = home_box_team_stats['TRB'],
-            assists = home_box_team_stats['AST'],
-            steals = home_box_team_stats['STL'],
-            blocks = home_box_team_stats['BLK'],
-            turnovers = home_box_team_stats['TOV'],
-            personal_fouls = home_box_team_stats['PF'],
-            points = home_box_team_stats['PTS'],
-            plus_minus = home_box_team_stats['+/-'],
+            minutes_played=home_box_team_stats['MP'],
+            field_goals=home_box_team_stats['FG'],
+            field_goal_attempts=home_box_team_stats['FGA'],
+            field_goal_pct=home_box_team_stats['FG%'],
+            three_pointers=home_box_team_stats['3P'],
+            three_point_attempts=home_box_team_stats['3PA'],
+            three_point_pct=home_box_team_stats['3P%'],
+            free_throws=home_box_team_stats['FT'],
+            free_throw_attempts=home_box_team_stats['FTA'],
+            free_throw_pct=home_box_team_stats['FT%'],
+            offensive_rebounds=home_box_team_stats['ORB'],
+            defensive_rebounds=home_box_team_stats['DRB'],
+            total_rebounds=home_box_team_stats['TRB'],
+            assists=home_box_team_stats['AST'],
+            steals=home_box_team_stats['STL'],
+            blocks=home_box_team_stats['BLK'],
+            turnovers=home_box_team_stats['TOV'],
+            personal_fouls=home_box_team_stats['PF'],
+            points=home_box_team_stats['PTS'],
+            plus_minus=home_box_team_stats['+/-'],
 
-            true_shooting_pct = home_box_team_stats['TS%'],
-            effective_field_goal_pct = home_box_team_stats['eFG%'],
-            three_point_attempt_rate = home_box_team_stats['TPAr'],
-            free_throw_attempt_rate = home_box_team_stats['FTr'],
-            offensive_rebound_pct = home_box_team_stats['ORB%'],
-            defensive_rebound_pct = home_box_team_stats['DRB%'],
-            total_rebound_pct = home_box_team_stats['TRB%'],
-            assist_pct = home_box_team_stats['AST%'],
-            steal_pct = home_box_team_stats['STL%'],
-            block_pct = home_box_team_stats['BLK%'],
-            turnover_pct = home_box_team_stats['TOV%'],
-            usage_pct = home_box_team_stats['USG%'],
-            offensive_rating = home_box_team_stats['ORtg'],
-            defensive_rating = home_box_team_stats['DRtg'],
-            box_plus_minus = home_box_team_stats['BPM'],
-            pace = home_team_game_summary['Pace'],
-            free_throws_per_field_goal_attempt = home_team_game_summary['FT/FGA'],
+            true_shooting_pct=home_box_team_stats['TS%'],
+            effective_field_goal_pct=home_box_team_stats['eFG%'],
+            three_point_attempt_rate=home_box_team_stats['TPAr'],
+            free_throw_attempt_rate=home_box_team_stats['FTr'],
+            offensive_rebound_pct=home_box_team_stats['ORB%'],
+            defensive_rebound_pct=home_box_team_stats['DRB%'],
+            total_rebound_pct=home_box_team_stats['TRB%'],
+            assist_pct=home_box_team_stats['AST%'],
+            steal_pct=home_box_team_stats['STL%'],
+            block_pct=home_box_team_stats['BLK%'],
+            turnover_pct=home_box_team_stats['TOV%'],
+            usage_pct=home_box_team_stats['USG%'],
+            offensive_rating=home_box_team_stats['ORtg'],
+            defensive_rating=home_box_team_stats['DRtg'],
+            box_plus_minus=home_box_team_stats['BPM'],
+            pace=home_team_game_summary['Pace'],
+            free_throws_per_field_goal_attempt=home_team_game_summary['FT/FGA'],
         )
         session.add(game_home_team_log)
 
         for i in home_box.index[:-1]:
             player_name = home_box['Players'][i]
             player_code = home_box['Player Code'][i]
-            player = session.query(Player).filter(Player.unique_code == player_code and Player.friendly_name == player_name)
+            player = session.query(Player).filter(
+                Player.unique_code == player_code and Player.friendly_name == player_name)
 
             if player == None:
                 player = Player(
-                    unique_code = player_code,
-                    first_name = player_name.split()[0],
-                    last_name = player_name.split()[1],
-                    friendly_name = player_name
+                    unique_code=player_code,
+                    first_name=player_name.split()[0],
+                    last_name=player_name.split()[1],
+                    friendly_name=player_name
                 )
                 session.add(player)
                 session.flush()
 
                 player_team = PlayerTeam(
-                    player_id = player.id,
-                    team_id = game_home_team.team_id,
-                    start_date = to_postgres_datetime(datetime.datetime.now())
+                    player_id=player.id,
+                    team_id=game_home_team.team_id,
+                    start_date=to_postgres_datetime(datetime.datetime.now())
                 )
                 session.add(player_team)
 
             if (home_box['MP'][i].contains("Did Not")):
                 game_player_log = GamePlayerLog(
-                    player_id = player.id,
-                    game_team_id = game_home_team.id
+                    player_id=player.id,
+                    game_team_id=game_home_team.id
                 )
             else:
                 game_player_log = GamePlayerLog(
-                    player_id = player.id,
-                    game_team_id = game_home_team.id,
+                    player_id=player.id,
+                    game_team_id=game_home_team.id,
 
-                    minutes_played = home_box['MP'][i],
-                    field_goals = home_box['FG'][i],
-                    field_goal_attempts = home_box['FGA'][i],
-                    field_goal_pct = home_box['FG%'][i],
-                    three_pointers = home_box['3P'][i],
-                    three_point_attempts = home_box['3PA'][i],
-                    three_point_pct = home_box['3P%'][i],
-                    free_throws = home_box['FT'][i],
-                    free_throw_attempts = home_box['FTA'][i],
-                    free_throw_pct = home_box['FT%'][i],
-                    offensive_rebounds = home_box['ORB'][i],
-                    defensive_rebounds = home_box['DRB'][i],
-                    total_rebounds = home_box['TRB'][i],
-                    assists = home_box['AST'][i],
-                    steals = home_box['STL'][i],
-                    blocks = home_box['BLK'][i],
-                    turnovers = home_box['TOV'][i],
-                    personal_fouls = home_box['PF'][i],
-                    points = home_box['PTS'][i],
-                    plus_minus = home_box['+/-'][i],
+                    minutes_played=home_box['MP'][i],
+                    field_goals=home_box['FG'][i],
+                    field_goal_attempts=home_box['FGA'][i],
+                    field_goal_pct=home_box['FG%'][i],
+                    three_pointers=home_box['3P'][i],
+                    three_point_attempts=home_box['3PA'][i],
+                    three_point_pct=home_box['3P%'][i],
+                    free_throws=home_box['FT'][i],
+                    free_throw_attempts=home_box['FTA'][i],
+                    free_throw_pct=home_box['FT%'][i],
+                    offensive_rebounds=home_box['ORB'][i],
+                    defensive_rebounds=home_box['DRB'][i],
+                    total_rebounds=home_box['TRB'][i],
+                    assists=home_box['AST'][i],
+                    steals=home_box['STL'][i],
+                    blocks=home_box['BLK'][i],
+                    turnovers=home_box['TOV'][i],
+                    personal_fouls=home_box['PF'][i],
+                    points=home_box['PTS'][i],
+                    plus_minus=home_box['+/-'][i],
 
-                    true_shooting_pct = home_box['TS%'][i],
-                    effective_field_goal_pct = home_box['eFG%'][i],
-                    three_point_attempt_rate = home_box['TPAr'][i],
-                    free_throw_attempt_rate = home_box['FTr'][i],
-                    offensive_rebound_pct = home_box['ORB%'][i],
-                    defensive_rebound_pct = home_box['DRB%'][i],
-                    total_rebound_pct = home_box['TRB%'][i],
-                    assist_pct = home_box['AST%'][i],
-                    steal_pct = home_box['STL%'][i],
-                    block_pct = home_box['BLK%'][i],
-                    turnover_pct = home_box['TOV%'][i],
-                    usage_pct = home_box['USG%'][i],
-                    offensive_rating = home_box['ORtg'][i],
-                    defensive_rating = home_box['DRtg'][i],
-                    box_plus_minus = home_box['BPM'][i]
-            )
+                    true_shooting_pct=home_box['TS%'][i],
+                    effective_field_goal_pct=home_box['eFG%'][i],
+                    three_point_attempt_rate=home_box['TPAr'][i],
+                    free_throw_attempt_rate=home_box['FTr'][i],
+                    offensive_rebound_pct=home_box['ORB%'][i],
+                    defensive_rebound_pct=home_box['DRB%'][i],
+                    total_rebound_pct=home_box['TRB%'][i],
+                    assist_pct=home_box['AST%'][i],
+                    steal_pct=home_box['STL%'][i],
+                    block_pct=home_box['BLK%'][i],
+                    turnover_pct=home_box['TOV%'][i],
+                    usage_pct=home_box['USG%'][i],
+                    offensive_rating=home_box['ORtg'][i],
+                    defensive_rating=home_box['DRtg'][i],
+                    box_plus_minus=home_box['BPM'][i]
+                )
             session.add(game_player_log)
 
-        game_away_team = GameTeam (
-            game_id = game.id,
-            team_id = session.query(Team.id).filter(Team.team_name == away_team),
-            team_home_away_type = 2
+        game_away_team = GameTeam(
+            game_id=game.id,
+            team_id=session.query(Team.id).filter(Team.team_name == away_team),
+            team_home_away_type=2
         )
         session.add(game_away_team)
         session.flush()
 
-        game_away_team_log = GameTeamLog (
-            game_team_id = game_away_team.id,
+        game_away_team_log = GameTeamLog(
+            game_team_id=game_away_team.id,
 
-            total_points = away_team_game_summary['T'],
-            first_quarter_points = away_team_game_summary['1'],
-            second_quarter_points = away_team_game_summary['2'],
-            third_quarter_points = away_team_game_summary['3'],
-            fourth_quarter_points = away_team_game_summary['4'],
-            overtime_points = None, #TODO: Configure OT calculation.
+            total_points=away_team_game_summary['T'],
+            first_quarter_points=away_team_game_summary['1'],
+            second_quarter_points=away_team_game_summary['2'],
+            third_quarter_points=away_team_game_summary['3'],
+            fourth_quarter_points=away_team_game_summary['4'],
+            overtime_points=None,  # TODO: Configure OT calculation.
 
-            minutes_played = away_box_team_stats['MP'],
-            field_goals = away_box_team_stats['FG'],
-            field_goal_attempts = away_box_team_stats['FGA'],
-            field_goal_pct = away_box_team_stats['FG%'],
-            three_pointers = away_box_team_stats['3P'],
-            three_point_attempts = away_box_team_stats['3PA'],
-            three_point_pct = away_box_team_stats['3P%'],
-            free_throws = away_box_team_stats['FT'],
-            free_throw_attempts = away_box_team_stats['FTA'],
-            free_throw_pct = away_box_team_stats['FT%'],
-            offensive_rebounds = away_box_team_stats['ORB'],
-            defensive_rebounds = away_box_team_stats['DRB'],
-            total_rebounds = away_box_team_stats['TRB'],
-            assists = away_box_team_stats['AST'],
-            steals = away_box_team_stats['STL'],
-            blocks = away_box_team_stats['BLK'],
-            turnovers = away_box_team_stats['TOV'],
-            personal_fouls = away_box_team_stats['PF'],
-            points = away_box_team_stats['PTS'],
-            plus_minus = away_box_team_stats['+/-'],
+            minutes_played=away_box_team_stats['MP'],
+            field_goals=away_box_team_stats['FG'],
+            field_goal_attempts=away_box_team_stats['FGA'],
+            field_goal_pct=away_box_team_stats['FG%'],
+            three_pointers=away_box_team_stats['3P'],
+            three_point_attempts=away_box_team_stats['3PA'],
+            three_point_pct=away_box_team_stats['3P%'],
+            free_throws=away_box_team_stats['FT'],
+            free_throw_attempts=away_box_team_stats['FTA'],
+            free_throw_pct=away_box_team_stats['FT%'],
+            offensive_rebounds=away_box_team_stats['ORB'],
+            defensive_rebounds=away_box_team_stats['DRB'],
+            total_rebounds=away_box_team_stats['TRB'],
+            assists=away_box_team_stats['AST'],
+            steals=away_box_team_stats['STL'],
+            blocks=away_box_team_stats['BLK'],
+            turnovers=away_box_team_stats['TOV'],
+            personal_fouls=away_box_team_stats['PF'],
+            points=away_box_team_stats['PTS'],
+            plus_minus=away_box_team_stats['+/-'],
 
-            true_shooting_pct = away_box_team_stats['TS%'],
-            effective_field_goal_pct = away_box_team_stats['eFG%'],
-            three_point_attempt_rate = away_box_team_stats['TPAr'],
-            free_throw_attempt_rate = away_box_team_stats['FTr'],
-            offensive_rebound_pct = away_box_team_stats['ORB%'],
-            defensive_rebound_pct = away_box_team_stats['DRB%'],
-            total_rebound_pct = away_box_team_stats['TRB%'],
-            assist_pct = away_box_team_stats['AST%'],
-            steal_pct = away_box_team_stats['STL%'],
-            block_pct = away_box_team_stats['BLK%'],
-            turnover_pct = away_box_team_stats['TOV%'],
-            usage_pct = away_box_team_stats['USG%'],
-            offensive_rating = away_box_team_stats['ORtg'],
-            defensive_rating = away_box_team_stats['DRtg'],
-            box_plus_minus = away_box_team_stats['BPM'],
-            pace = away_team_game_summary['Pace'],
-            free_throws_per_field_goal_attempt = away_team_game_summary['FT/FGA'],
+            true_shooting_pct=away_box_team_stats['TS%'],
+            effective_field_goal_pct=away_box_team_stats['eFG%'],
+            three_point_attempt_rate=away_box_team_stats['TPAr'],
+            free_throw_attempt_rate=away_box_team_stats['FTr'],
+            offensive_rebound_pct=away_box_team_stats['ORB%'],
+            defensive_rebound_pct=away_box_team_stats['DRB%'],
+            total_rebound_pct=away_box_team_stats['TRB%'],
+            assist_pct=away_box_team_stats['AST%'],
+            steal_pct=away_box_team_stats['STL%'],
+            block_pct=away_box_team_stats['BLK%'],
+            turnover_pct=away_box_team_stats['TOV%'],
+            usage_pct=away_box_team_stats['USG%'],
+            offensive_rating=away_box_team_stats['ORtg'],
+            defensive_rating=away_box_team_stats['DRtg'],
+            box_plus_minus=away_box_team_stats['BPM'],
+            pace=away_team_game_summary['Pace'],
+            free_throws_per_field_goal_attempt=away_team_game_summary['FT/FGA'],
         )
         session.add(game_away_team_log)
 
         for i in away_box.index[:-1]:
             player_name = away_box['Players'][i]
             player_code = away_box['Player Code'][i]
-            player = session.query(Player).filter(Player.unique_code == player_code and Player.friendly_name == player_name)
+            player = session.query(Player).filter(
+                Player.unique_code == player_code and Player.friendly_name == player_name)
 
             if player == None:
                 player = Player(
-                    unique_code = player_code,
-                    first_name = player_name.split()[0],
-                    last_name = player_name.split()[1],
-                    friendly_name = player_name
+                    unique_code=player_code,
+                    first_name=player_name.split()[0],
+                    last_name=player_name.split()[1],
+                    friendly_name=player_name
                 )
                 session.add(player)
                 session.flush()
             if (away_box['MP'][i].contains("Did Not")):
                 game_player_log = GamePlayerLog(
-                    player_id = player.id,
-                    game_team_id = game_away_team.id
+                    player_id=player.id,
+                    game_team_id=game_away_team.id
                 )
             else:
                 game_player_log = GamePlayerLog(
-                    player_id = player.id,
-                    game_team_id = game_away_team.id,
+                    player_id=player.id,
+                    game_team_id=game_away_team.id,
 
-                    minutes_played = away_box['MP'][i],
-                    field_goals = away_box['FG'][i],
-                    field_goal_attempts = away_box['FGA'][i],
-                    field_goal_pct = away_box['FG%'][i],
-                    three_pointers = away_box['3P'][i],
-                    three_point_attempts = away_box['3PA'][i],
-                    three_point_pct = away_box['3P%'][i],
-                    free_throws = away_box['FT'][i],
-                    free_throw_attempts = away_box['FTA'][i],
-                    free_throw_pct = away_box['FT%'][i],
-                    offensive_rebounds = away_box['ORB'][i],
-                    defensive_rebounds = away_box['DRB'][i],
-                    total_rebounds = away_box['TRB'][i],
-                    assists = away_box['AST'][i],
-                    steals = away_box['STL'][i],
-                    blocks = away_box['BLK'][i],
-                    turnovers = away_box['TOV'][i],
-                    personal_fouls = away_box['PF'][i],
-                    points = away_box['PTS'][i],
-                    plus_minus = away_box['+/-'][i],
+                    minutes_played=away_box['MP'][i],
+                    field_goals=away_box['FG'][i],
+                    field_goal_attempts=away_box['FGA'][i],
+                    field_goal_pct=away_box['FG%'][i],
+                    three_pointers=away_box['3P'][i],
+                    three_point_attempts=away_box['3PA'][i],
+                    three_point_pct=away_box['3P%'][i],
+                    free_throws=away_box['FT'][i],
+                    free_throw_attempts=away_box['FTA'][i],
+                    free_throw_pct=away_box['FT%'][i],
+                    offensive_rebounds=away_box['ORB'][i],
+                    defensive_rebounds=away_box['DRB'][i],
+                    total_rebounds=away_box['TRB'][i],
+                    assists=away_box['AST'][i],
+                    steals=away_box['STL'][i],
+                    blocks=away_box['BLK'][i],
+                    turnovers=away_box['TOV'][i],
+                    personal_fouls=away_box['PF'][i],
+                    points=away_box['PTS'][i],
+                    plus_minus=away_box['+/-'][i],
 
-                    true_shooting_pct = away_box['TS%'][i],
-                    effective_field_goal_pct = away_box['eFG%'][i],
-                    three_point_attempt_rate = away_box['TPAr'][i],
-                    free_throw_attempt_rate = away_box['FTr'][i],
-                    offensive_rebound_pct = away_box['ORB%'][i],
-                    defensive_rebound_pct = away_box['DRB%'][i],
-                    total_rebound_pct = away_box['TRB%'][i],
-                    assist_pct = away_box['AST%'][i],
-                    steal_pct = away_box['STL%'][i],
-                    block_pct = away_box['BLK%'][i],
-                    turnover_pct = away_box['TOV%'][i],
-                    usage_pct = away_box['USG%'][i],
-                    offensive_rating = away_box['ORtg'][i],
-                    defensive_rating = away_box['DRtg'][i],
-                    box_plus_minus = away_box['BPM'][i]
-            )
+                    true_shooting_pct=away_box['TS%'][i],
+                    effective_field_goal_pct=away_box['eFG%'][i],
+                    three_point_attempt_rate=away_box['TPAr'][i],
+                    free_throw_attempt_rate=away_box['FTr'][i],
+                    offensive_rebound_pct=away_box['ORB%'][i],
+                    defensive_rebound_pct=away_box['DRB%'][i],
+                    total_rebound_pct=away_box['TRB%'][i],
+                    assist_pct=away_box['AST%'][i],
+                    steal_pct=away_box['STL%'][i],
+                    block_pct=away_box['BLK%'][i],
+                    turnover_pct=away_box['TOV%'][i],
+                    usage_pct=away_box['USG%'][i],
+                    offensive_rating=away_box['ORtg'][i],
+                    defensive_rating=away_box['DRtg'][i],
+                    box_plus_minus=away_box['BPM'][i]
+                )
             session.add(game_player_log)
 
     session.commit()
@@ -652,71 +670,72 @@ def initialize_database(year, database='mock_nba_database'):
 
         for i in player_stats_df.index[:-1]:
             player_stats = PlayerStats(
-                player_id = player.id,
-                type = 1, # for Regular Season
-                season = player_stats_df['Season'][i],
-                games_played = player_stats_df['G'][i],
-                games_started = player_stats_df['GS'][i],
-                minutes_played = player_stats_df['MP'][i],
-                field_goals = player_stats_df['FG'][i],
-                field_goal_attempts = player_stats_df['FGA'][i],
-                field_goal_pct = player_stats_df['FG%'][i],
-                three_pointers = player_stats_df['3P'][i],
-                three_point_attempts = player_stats_df['3PA'][i],
-                three_point_pct = player_stats_df['3P%'][i],
-                two_pointers = player_stats_df['2P'][i],
-                two_point_attempts = player_stats_df['2PA'][i],
-                two_point_pct = player_stats_df['2P%'][i],
-                effective_field_goal_pct = player_stats_df['eFG%'][i],
-                free_throws = player_stats_df['FT'][i],
-                free_throw_attempts = player_stats_df['FTA'][i],
-                free_throw_pct = player_stats_df['FT%'][i],
-                offensive_rebounds = player_stats_df['ORB'][i],
-                defensive_rebounds = player_stats_df['DRB'][i],
-                total_rebounds = player_stats_df['TRB'][i],
-                assists = player_stats_df['AST'][i],
-                steals = player_stats_df['STL'][i],
-                blocks = player_stats_df['BLK'][i],
-                turnovers = player_stats_df['TOV'][i],
-                personal_fouls = player_stats_df['PF'][i],
-                points = player_stats_df['PTS'][i]
+                player_id=player.id,
+                type=1,  # for Regular Season
+                season=player_stats_df['Season'][i],
+                games_played=player_stats_df['G'][i],
+                games_started=player_stats_df['GS'][i],
+                minutes_played=player_stats_df['MP'][i],
+                field_goals=player_stats_df['FG'][i],
+                field_goal_attempts=player_stats_df['FGA'][i],
+                field_goal_pct=player_stats_df['FG%'][i],
+                three_pointers=player_stats_df['3P'][i],
+                three_point_attempts=player_stats_df['3PA'][i],
+                three_point_pct=player_stats_df['3P%'][i],
+                two_pointers=player_stats_df['2P'][i],
+                two_point_attempts=player_stats_df['2PA'][i],
+                two_point_pct=player_stats_df['2P%'][i],
+                effective_field_goal_pct=player_stats_df['eFG%'][i],
+                free_throws=player_stats_df['FT'][i],
+                free_throw_attempts=player_stats_df['FTA'][i],
+                free_throw_pct=player_stats_df['FT%'][i],
+                offensive_rebounds=player_stats_df['ORB'][i],
+                defensive_rebounds=player_stats_df['DRB'][i],
+                total_rebounds=player_stats_df['TRB'][i],
+                assists=player_stats_df['AST'][i],
+                steals=player_stats_df['STL'][i],
+                blocks=player_stats_df['BLK'][i],
+                turnovers=player_stats_df['TOV'][i],
+                personal_fouls=player_stats_df['PF'][i],
+                points=player_stats_df['PTS'][i]
             )
 
             session.add(player_stats)
 
         player_stats_regular_season_totals = player_stats_df.iloc[-1]
         player_stats_reg_career = PlayerStats(
-                player_id = player.id,
-                type = 2, # for Regular Season Career
-                season = player_stats_regular_season_totals['Season'],
-                games_played = player_stats_regular_season_totals['G'],
-                games_started = player_stats_regular_season_totals['GS'],
-                minutes_played = player_stats_regular_season_totals['MP'],
-                field_goals = player_stats_regular_season_totals['FG'],
-                field_goal_attempts = player_stats_regular_season_totals['FGA'],
-                field_goal_pct = player_stats_regular_season_totals['FG%'],
-                three_pointers = player_stats_regular_season_totals['3P'],
-                three_point_attempts = player_stats_regular_season_totals['3PA'],
-                three_point_pct = player_stats_regular_season_totals['3P%'],
-                two_pointers = player_stats_regular_season_totals['2P'],
-                two_point_attempts = player_stats_regular_season_totals['2PA'],
-                two_point_pct = player_stats_regular_season_totals['2P%'],
-                effective_field_goal_pct = player_stats_regular_season_totals['eFG%'],
-                free_throws = player_stats_regular_season_totals['FT'],
-                free_throw_attempts = player_stats_regular_season_totals['FTA'],
-                free_throw_pct = player_stats_regular_season_totals['FT%'],
-                offensive_rebounds = player_stats_regular_season_totals['ORB'],
-                defensive_rebounds = player_stats_regular_season_totals['DRB'],
-                total_rebounds = player_stats_regular_season_totals['TRB'],
-                assists = player_stats_regular_season_totals['AST'],
-                steals = player_stats_regular_season_totals['STL'],
-                blocks = player_stats_regular_season_totals['BLK'],
-                turnovers = player_stats_regular_season_totals['TOV'],
-                personal_fouls = player_stats_regular_season_totals['PF'],
-                points = player_stats_regular_season_totals['PTS']
-            )
+            player_id=player.id,
+            type=2,  # for Regular Season Career
+            season=player_stats_regular_season_totals['Season'],
+            games_played=player_stats_regular_season_totals['G'],
+            games_started=player_stats_regular_season_totals['GS'],
+            minutes_played=player_stats_regular_season_totals['MP'],
+            field_goals=player_stats_regular_season_totals['FG'],
+            field_goal_attempts=player_stats_regular_season_totals['FGA'],
+            field_goal_pct=player_stats_regular_season_totals['FG%'],
+            three_pointers=player_stats_regular_season_totals['3P'],
+            three_point_attempts=player_stats_regular_season_totals['3PA'],
+            three_point_pct=player_stats_regular_season_totals['3P%'],
+            two_pointers=player_stats_regular_season_totals['2P'],
+            two_point_attempts=player_stats_regular_season_totals['2PA'],
+            two_point_pct=player_stats_regular_season_totals['2P%'],
+            effective_field_goal_pct=player_stats_regular_season_totals['eFG%'],
+            free_throws=player_stats_regular_season_totals['FT'],
+            free_throw_attempts=player_stats_regular_season_totals['FTA'],
+            free_throw_pct=player_stats_regular_season_totals['FT%'],
+            offensive_rebounds=player_stats_regular_season_totals['ORB'],
+            defensive_rebounds=player_stats_regular_season_totals['DRB'],
+            total_rebounds=player_stats_regular_season_totals['TRB'],
+            assists=player_stats_regular_season_totals['AST'],
+            steals=player_stats_regular_season_totals['STL'],
+            blocks=player_stats_regular_season_totals['BLK'],
+            turnovers=player_stats_regular_season_totals['TOV'],
+            personal_fouls=player_stats_regular_season_totals['PF'],
+            points=player_stats_regular_season_totals['PTS']
+        )
         session.add(player_stats_reg_career)
         session.commit()
+
 
 # HELPER FUNCTIONS
 
@@ -726,8 +745,11 @@ Get the end-date for the regular season.
 @param schedule_dataframe - the data frame of the season schedule.
 @return string of date in postgres format.
 """
+
+
 def get_season_end_date(schedule_dataframe) -> str:
     pass
+
 
 """
 Populate the type tables with known types.
@@ -736,6 +758,8 @@ Type tables: game_type, player_stats_type, team_home_away_type, team_stats_type
 @param session - SQLAlchemy session.
 @return None
 """
+
+
 def populate_type_tables(session: Session) -> None:
     # Add Game Types TODO: Expand playoffs into CQF, CSF, CF, F.
     game_types = ["Preseason", "Regular Season", "Play-In Game", "Playoffs"]
@@ -765,6 +789,7 @@ def populate_type_tables(session: Session) -> None:
         session.add(tst_object)
         session.commit()
 
+
 """
 Populate the team tables with the current teams for the season and initialize their related tables.
 Team tables: team, team_stats, team_advanced_stats
@@ -772,110 +797,118 @@ Team tables: team, team_stats, team_advanced_stats
 @param session - SQLAlchemy session.
 @return None
 """
-def populate_team_tables(session: Session, season_id) -> None:
 
+
+def populate_team_tables(session: Session, season_id) -> None:
     for team in CURRENT_TEAMS:
         season = session.query(Season.year).filter(Season.id == season_id).first()
-        t = Team (
-            season_id = season_id,
-            name = team,
-            abbreviation = TEAM_ABBRV[team],
-            friendly_name = f"{season - 1}-{season} {team}",
+        t = Team(
+            season_id=season_id,
+            name=team,
+            abbreviation=TEAM_ABBRV[team],
+            friendly_name=f"{season - 1}-{season} {team}",
 
-            wins = 0,
-            losses = 0,
-            home_wins = 0,
-            home_losses = 0,
-            away_wins = 0,
-            away_losses = 0,
-            streak = 0,
-            last_ten_wins = 0,
-            last_ten_losses = 0,
+            wins=0,
+            losses=0,
+            home_wins=0,
+            home_losses=0,
+            away_wins=0,
+            away_losses=0,
+            streak=0,
+            last_ten_wins=0,
+            last_ten_losses=0,
 
-            ats_wins = 0,
-            ats_losses = 0,
-            ats_ties = 0,
-            ats_home_wins = 0,
-            ats_home_losses = 0,
-            ats_home_ties = 0,
-            ats_away_wins = 0,
-            ats_away_losses = 0,
-            ats_away_ties = 0
+            ats_wins=0,
+            ats_losses=0,
+            ats_ties=0,
+            ats_home_wins=0,
+            ats_home_losses=0,
+            ats_home_ties=0,
+            ats_away_wins=0,
+            ats_away_losses=0,
+            ats_away_ties=0
         )
         session.add(t)
         session.flush()
 
         for i in range(len(4)):
             ts = TeamStats(
-                team_id = t.id,
-                type = i + 1,
-                minutes_played = 0,
-                field_goals = 0,
-                field_goal_attempts = 0,
-                three_pointers = 0,
-                three_point_attempts = 0,
-                three_point_pct = 0,
-                two_pointers = 0,
-                two_point_attempts = 0,
-                two_point_pct = 0,
-                free_throws = 0,
-                free_throw_attempts = 0,
-                free_throw_pct = 0,
-                offensive_rebounds = 0,
-                defensive_rebounds = 0,
-                total_rebounds = 0,
-                assists = 0,
-                steals = 0,
-                blocks = 0,
-                turnovers = 0,
-                personal_fouls = 0,
-                points = 0
+                team_id=t.id,
+                type=i + 1,
+                minutes_played=0,
+                field_goals=0,
+                field_goal_attempts=0,
+                three_pointers=0,
+                three_point_attempts=0,
+                three_point_pct=0,
+                two_pointers=0,
+                two_point_attempts=0,
+                two_point_pct=0,
+                free_throws=0,
+                free_throw_attempts=0,
+                free_throw_pct=0,
+                offensive_rebounds=0,
+                defensive_rebounds=0,
+                total_rebounds=0,
+                assists=0,
+                steals=0,
+                blocks=0,
+                turnovers=0,
+                personal_fouls=0,
+                points=0
             )
             session.add(ts)
 
         tas = TeamAdvancedStats(
-            team_id = t.id,
-            wins = 0,
-            losses = 0,
-            pythagorean_wins = 0,
-            pythagorean_losses = 0,
-            margin_of_victory = 0,
-            strength_of_schedule = 0,
-            simple_rating_system = 0,
-            offensive_rating = 0,
-            defensive_rating = 0,
-            pace = 0,
-            free_throw_attempt_rate = 0,
-            three_point_attempt_rate = 0,
-            effective_field_goal_pct = 0,
-            turnover_pct = 0,
-            offensive_rebound_pct = 0,
-            free_throws_per_field_goal_attempt = 0,
-            opponent_effective_field_goal_pct = 0,
-            opponent_turnover_pct = 0,
-            defensive_rebound_pct = 0,
-            defensive_free_throws_per_field_goal_attempt = 0,
+            team_id=t.id,
+            wins=0,
+            losses=0,
+            pythagorean_wins=0,
+            pythagorean_losses=0,
+            margin_of_victory=0,
+            strength_of_schedule=0,
+            simple_rating_system=0,
+            offensive_rating=0,
+            defensive_rating=0,
+            pace=0,
+            free_throw_attempt_rate=0,
+            three_point_attempt_rate=0,
+            effective_field_goal_pct=0,
+            turnover_pct=0,
+            offensive_rebound_pct=0,
+            free_throws_per_field_goal_attempt=0,
+            opponent_effective_field_goal_pct=0,
+            opponent_turnover_pct=0,
+            defensive_rebound_pct=0,
+            defensive_free_throws_per_field_goal_attempt=0,
         )
         session.add(tas)
+
 
 """
 Convert a datestring to the postgres date.
 @param date_string
 @return string in PostgreSQL format.
 """
+
+
 def to_postgres_date(date_string: str) -> str:
     # Parse the input string into a datetime object
     date = datetime.datetime.strptime(date_string, '%a, %b %d, %Y')
     # Return the date in the PostgreSQL date format
     return date.strftime('%Y-%m-%d')
 
+
 """
 Convert a datestring to the postgres date.
 @param datetime - Python datetime object.
 @return string in PostgreSQL format.
 """
+
+
 def to_postgres_datetime(datetime: datetime) -> str:
     # Parse the input string into a datetime object
     return datetime.strftime("%Y/%m/%d %H:%M:%S")
+
 
 initialize_database(2022)
