@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 from sqlalchemy import Column, Integer, String, DateTime, DECIMAL, create_engine, select
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.declarative import declarative_base
@@ -486,7 +486,7 @@ def initialize_database(year, database='mock_nba_database'):
                 player_team = PlayerTeam(
                     player_id=player.id,
                     team_id=game_home_team.team_id,
-                    start_date=to_postgres_datetime(datetime.datetime.now())
+                    start_date=to_postgres_timestamp(datetime.datetime.now())
                 )
                 session.add(player_team)
 
@@ -888,28 +888,19 @@ def populate_team_tables(session: Session, season_id) -> None:
 
 """
 Convert a datestring to the postgres date.
-@param date_string
-@return string in PostgreSQL format.
-"""
-
-
-def to_postgres_date(date_string: str) -> str:
-    # Parse the input string into a datetime object
-    date = datetime.datetime.strptime(date_string, '%a, %b %d, %Y')
-    # Return the date in the PostgreSQL date format
-    return date.strftime('%Y-%m-%d')
-
-
-"""
-Convert a datestring to the postgres date.
 @param datetime - Python datetime object.
 @return string in PostgreSQL format.
 """
 
 
-def to_postgres_datetime(datetime: datetime) -> str:
-    # Parse the input string into a datetime object
-    return datetime.strftime("%Y/%m/%d %H:%M:%S")
+def to_postgres_timestamp(date_string: str) -> str:
+    # Convert the input string to a datetime object
+    date_obj = datetime.strptime(date_string, '%a, %b %d, %Y')
+
+    # Convert the datetime object to the PostgreSQL timestamp format
+    postgres_timestamp = date_obj.strftime('%Y-%m-%d %H:%M:%S')
+
+    return postgres_timestamp
 
 
-initialize_database(2022)
+# initialize_database(2022)
