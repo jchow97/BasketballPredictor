@@ -5,3 +5,6 @@
 .idea/vcs.xml
 .idea/workspace.xml
 .idea/inspectionProfiles/profiles_settings.xml
+.idea/dataSources
+.idea/dataSources.local.xml
+.idea/dataSources.xml
