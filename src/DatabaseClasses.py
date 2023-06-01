@@ -1,5 +1,5 @@
 import datetime
-from sqlalchemy import Column, Integer, String, DateTime, DECIMAL, create_engine
+from sqlalchemy import Column, Integer, String, DateTime, DECIMAL, create_engine, select
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import ForeignKey
@@ -604,7 +604,7 @@ def initialize_database(year, database='mock_nba_database'):
             player = session.query(Player).filter(
                 Player.unique_code == player_code and Player.friendly_name == player_name)
 
-            if player == None:
+            if player is None:
                 player = Player(
                     unique_code=player_code,
                     first_name=player_name.split()[0],
@@ -613,7 +613,7 @@ def initialize_database(year, database='mock_nba_database'):
                 )
                 session.add(player)
                 session.flush()
-            if (away_box['MP'][i].contains("Did Not")):
+            if away_box['MP'][i].contains("Did Not"):
                 game_player_log = GamePlayerLog(
                     player_id=player.id,
                     game_team_id=game_away_team.id
@@ -801,12 +801,13 @@ Team tables: team, team_stats, team_advanced_stats
 
 def populate_team_tables(session: Session, season_id) -> None:
     for team in CURRENT_TEAMS:
-        season = session.query(Season.year).filter(Season.id == season_id).first()
+        season = session.query(Season.year).where(Season.id == season_id).one()[0]
+        prev_year = str(int(season) - 1)
         t = Team(
             season_id=season_id,
             name=team,
             abbreviation=TEAM_ABBRV[team],
-            friendly_name=f"{season - 1}-{season} {team}",
+            friendly_name=f"{prev_year}-{season} {team}",
 
             wins=0,
             losses=0,

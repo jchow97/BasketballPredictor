@@ -1,10 +1,6 @@
-from bs4 import BeautifulSoup
-from bs4 import Comment
+from bs4 import BeautifulSoup, Comment
 from urllib.error import HTTPError
 import pandas as pd
-import psycopg2
-import re
-from sqlalchemy import create_engine
 import requests
 import datetime
 from src.common.constants import TEAM_ABBRV, MONTHS_ABBRV, MONTHS
@@ -57,11 +53,11 @@ class Scraper:
     Scrapes one NBA Season Schedule and returns a collection of schedules.
 
     @param season - NBA Season to scrape. Note: the 2021-2022 season would be season 2022
-    @param database - PostgresSQL to create the tables in. Default is 'nba_database'
+    @param html_file - relative path for specified html file. Default is None. If specified, overrides specified season.
     @return pandas DataFrame of the season schedule.
     """
 
-    def scrape_nba_season(self, season) -> pd.DataFrame or None:
+    def scrape_nba_season(self, season, html_file=None) -> pd.DataFrame or None:
         print(f"Beginning scrape for {season} season.")
         # TODO: add handling for july, aug, sept
         months = ["october", "november", "december", "january", "february", "march", "april", "may", "june"]
@@ -73,16 +69,24 @@ class Scraper:
             # Open URL, request the html, and create BeautifulSoup object
             try:
                 url = f"https://www.basketball-reference.com/leagues/NBA_{season}_games-{month}.html"
-                # html = urlopen(url)
-                html = requests.get(url, headers={'User-Agent': self.__USER_AGENT})
+
+                if html_file is None:
+                    html = requests.get(url, headers={'User-Agent': self.__USER_AGENT})
+                else:
+                    html = open(html_file).read()
+
+                if html.status_code == 404:
+                    print("The month or season does not exist.")
+                    return None
+
                 soup = BeautifulSoup(html.text, 'lxml')
             except HTTPError as e:
-                print("Error occured!")
+                print("An HTTPError occurred!")
                 print(e)
                 # TODO: Add error class for error handling
                 return None
             except:
-                print("The month or season does not exist.")
+                print("Unknown Error")
                 return None
             else:
                 # Extract headers into a list. Expected headers:
@@ -115,17 +119,23 @@ class Scraper:
     Scrape the nba match and returns a collection of data frames from the match.
     
     @param game_code - game_code string for the website
+    @param html_file - relative path for specified html file. Default is None. If specified, overrides specified season.
     @return Collection of pandas DataFrames
     """
 
-    def scrape_nba_match(self, game_code) -> list[pd.DataFrame]:
+    def scrape_nba_match(self, game_code, html_file=None) -> list[pd.DataFrame]:
         # TODO: take the match scraper from old scraper, then remove the unneeded parts.
         try:
             url = f'https://www.basketball-reference.com/boxscores/{game_code}.html'
-            html = requests.get(url, headers={'User-Agent': self.__USER_AGENT})
+
+            if html_file is None:
+                html = requests.get(url, headers={'User-Agent': self.__USER_AGENT})
+            else:
+                html = open(html_file).read()
+
             soup = BeautifulSoup(html.text, 'lxml')
         except HTTPError as e:
-            print("Error occured!")
+            print("Error occurred!")
             print(e)
         else:
             # TODO: Line Score and Four Factors Headers + Tables
@@ -206,10 +216,11 @@ class Scraper:
 
     @param team - team name (e.g. TODO)
     @param season - year (e.g. 2022 is 2021-2022)
+    @param html_file - relative path for specified html file. Default is None. If specified, overrides specified season.
     @return Collection of 3 pandas DataFrame
     """
 
-    def scrape_nba_team(self, team, season) -> list[pd.DataFrame]:
+    def scrape_nba_team(self, team, season, html_file=None) -> list[pd.DataFrame]:
         pass
 
     """
@@ -219,12 +230,16 @@ class Scraper:
     @return pandas DataFrame of player stats.
     """
 
-    def scrape_nba_player(self, player_code) -> pd.DataFrame or None:
+    def scrape_nba_player(self, player_code, html_file=None) -> pd.DataFrame or None:
         last_initial = player_code[0]
         url = f'https://www.basketball-reference.com/players/{last_initial}/{player_code}.html'
 
         try:
-            html = requests.get(url, headers={'User-Agent': self.__USER_AGENT})
+            if html_file is None:
+                html = requests.get(url, headers={'User-Agent': self.__USER_AGENT})
+            else:
+                html = open(html_file).read()
+
             soup = BeautifulSoup(html.text, 'lxml')
         except HTTPError as e:
             print("Error occured!")
