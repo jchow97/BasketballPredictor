@@ -832,7 +832,7 @@ def populate_team_tables(session: Session, season_id) -> None:
         session.add(t)
         session.flush()
 
-        for i in range(len(4)):
+        for i in range(4):
             ts = TeamStats(
                 team_id=t.id,
                 type=i + 1,
