@@ -77,7 +77,7 @@ class Scraper:
                     time.sleep(self.__timeoutSeconds)
                     html = requests.get(url, headers={'User-Agent': self.__USER_AGENT})
                     self.__accessCounter += 1
-                    print(self.__accessCounter)
+                    print("count: " + str(self.__accessCounter) + " url: " + url)
                 else:
                     html = open(html_file).read()
 
@@ -115,7 +115,7 @@ class Scraper:
 
         try:
             # Concatenate all the months together into one single data frame.
-            final_schedule = pd.concat(schedule)
+            final_schedule = pd.concat(schedule, ignore_index=True)
             return final_schedule
         except:
             print(f"Failed to scrape {season} schedule.")
@@ -138,7 +138,7 @@ class Scraper:
                 time.sleep(self.__timeoutSeconds)
                 html = requests.get(url, headers={'User-Agent': self.__USER_AGENT})
                 self.__accessCounter += 1
-                print(self.__accessCounter)
+                print("count: " + str(self.__accessCounter) + " url: " + url)
             else:
                 html = open(html_file).read()
 
@@ -248,7 +248,7 @@ class Scraper:
                 time.sleep(self.__timeoutSeconds)
                 html = requests.get(url, headers={'User-Agent': self.__USER_AGENT})
                 self.__accessCounter += 1
-                print(self.__accessCounter)
+                print("count: " + str(self.__accessCounter) + " url: " + url)
             else:
                 html = open(html_file).read()
 
@@ -296,11 +296,14 @@ class Scraper:
     Get Player Code Base (e.g. lillada of lillada01)
 
     @param name - Name of the player.
-    @return str - player code that was determined.
+    @return str - player code that was determined or None if not a player.
     """
 
-    def __get_player_code_base(self, name) -> str:
+    def __get_player_code_base(self, name) -> str or None:
         player_code_base = ''
+        if name == "Team Totals":
+            return None
+
         player_name = name.split()
 
         ln_length = min(len(player_name[1]), 5)
@@ -325,7 +328,7 @@ class Scraper:
         # Parse the input string into a datetime object
         date = datetime.datetime.strptime(date_string, '%a, %b %d, %Y')
 
-        # Return the date in the PostgreSQL date format
+        # Return the date in the PostgresSQL date format
         return date.strftime('%Y-%m-%d')
 
     """
@@ -359,10 +362,11 @@ class Scraper:
     @return string of game code.
     """
 
-    def __get_game_code(self, date, home_team) -> str:
-        game_date_year = date[3]
-        game_date_month = MONTHS_ABBRV[date[1]]
-        game_date_day = date[2][:-1]
+    def get_game_code(self, date, home_team) -> str:
+        parsed_date = date.split()
+        game_date_year = parsed_date[3]
+        game_date_month = MONTHS_ABBRV[parsed_date[1]]
+        game_date_day = parsed_date[2][:-1]
         if len(game_date_day) == 1:
             game_date_day = '0' + game_date_day
 
@@ -388,8 +392,12 @@ class Scraper:
                 basic_data = [td.get_text() for td in basic_table[i].find_all('td')]
                 basic_data.insert(0, player)
 
+                player_code = ""
                 player_code_base = self.__get_player_code_base(player)
-                player_code = basic_table[i].select(f"a[href*={player_code_base}]")
+                if player_code_base is not None:
+                    player_code = \
+                        basic_table[i].select_one(f"a[href*={player_code_base}]")['href'].split('/')[-1].split('.')[0]
+
                 basic_data.insert(1, player_code)
 
                 adv_data = [td.get_text() for td in adv_table[i].find_all('td')[1:]]
@@ -403,6 +411,7 @@ class Scraper:
     @param header - the list of column headers to be formatted.
     @return list of formatted headers
     """
+
     def format_headers(self, headers: list[str]) -> list[str]:
         for i in range(len(headers)):
             headers[i] = headers[i].replace("3", "_3")

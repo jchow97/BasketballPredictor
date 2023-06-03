@@ -27,16 +27,16 @@ class GamePlayerLog(Base):
     player_id = Column(Integer, ForeignKey("player.id"))
     game_team_id = Column(Integer, ForeignKey("game_team.id"))
 
-    minutes_played = Column(Integer)
+    minutes_played = Column(String(6))
     field_goals = Column(Integer)
     field_goal_attempts = Column(Integer)
-    field_goal_pct = Column(Integer)
+    field_goal_pct = Column(DECIMAL, default=None)
     three_pointers = Column(Integer)
     three_point_attempts = Column(Integer)
-    three_point_pct = Column(DECIMAL)
+    three_point_pct = Column(DECIMAL, default=None)
     free_throws = Column(Integer)
     free_throw_attempts = Column(Integer)
-    free_throw_pct = Column(DECIMAL)
+    free_throw_pct = Column(DECIMAL, default=None)
     offensive_rebounds = Column(Integer)
     defensive_rebounds = Column(Integer)
     total_rebounds = Column(Integer)
@@ -47,10 +47,10 @@ class GamePlayerLog(Base):
     personal_fouls = Column(Integer)
     points = Column(Integer)
     plus_minus = Column(Integer)
-    true_shooting_pct = Column(DECIMAL)
-    effective_field_goal_pct = Column(DECIMAL)
-    three_point_attempt_rate = Column(DECIMAL)
-    free_throw_attempt_rate = Column(DECIMAL)
+    true_shooting_pct = Column(DECIMAL, default=None)
+    effective_field_goal_pct = Column(DECIMAL, default=None)
+    three_point_attempt_rate = Column(DECIMAL, default=None)
+    free_throw_attempt_rate = Column(DECIMAL, default=None)
     offensive_rebound_pct = Column(DECIMAL)
     defensive_rebound_pct = Column(DECIMAL)
     total_rebound_pct = Column(DECIMAL)
@@ -92,10 +92,10 @@ class GameTeamLog(Base):
     overtime_points = Column(
         String)  # going to store a list of = Column(Integer)s, then we can store infinite overtime_points
 
-    minutes_played = Column(Integer)
+    minutes_played = Column(String(6))
     field_goals = Column(Integer)
     field_goal_attempts = Column(Integer)
-    field_goal_pct = Column(Integer)
+    field_goal_pct = Column(DECIMAL)
     three_pointers = Column(Integer)
     three_point_attempts = Column(Integer)
     three_point_pct = Column(DECIMAL)
@@ -161,7 +161,7 @@ class PlayerStats(Base):
 
     games_played = Column(Integer)
     games_started = Column(Integer)
-    minutes_played = Column(DECIMAL)
+    minutes_played = Column(String(6))
     field_goals = Column(DECIMAL)
     field_goal_attempts = Column(DECIMAL)
     field_goal_pct = Column(DECIMAL)
@@ -262,7 +262,7 @@ class TeamStats(Base):
     id = Column(Integer, primary_key=True)
     team_id = Column(Integer, ForeignKey("team.id"))
     type = Column(Integer, ForeignKey("team_stats_type.id"))
-    minutes_played = Column(DECIMAL)
+    minutes_played = Column(String(6))
     field_goals = Column(DECIMAL)
     field_goal_attempts = Column(DECIMAL)
     three_pointers = Column(DECIMAL)
@@ -368,7 +368,7 @@ def initialize_database(year, database='mock_nba_database'):
             # TODO: scrape playoff games too
             type=1,
             start_datetime=s.to_postgres_date(game_datetime),
-            game_code=s.__get_game_code(game_datetime, home_team)
+            game_code=s.get_game_code(game_datetime, home_team)
         )
         session.add(game)
         session.flush()
@@ -410,7 +410,7 @@ def initialize_database(year, database='mock_nba_database'):
 
         game_home_team = GameTeam(
             game_id=game.id,
-            team_id=session.query(Team.id).filter(Team.team_name == home_team),
+            team_id=session.query(Team.id).filter(Team.name == home_team),
             team_home_away_type=1
         )
         session.add(game_home_team)
@@ -445,11 +445,11 @@ def initialize_database(year, database='mock_nba_database'):
             turnovers=home_box_team_stats['TOV'],
             personal_fouls=home_box_team_stats['PF'],
             points=home_box_team_stats['PTS'],
-            plus_minus=home_box_team_stats['+/-'],
+            plus_minus=None,
 
             true_shooting_pct=home_box_team_stats['TS%'],
             effective_field_goal_pct=home_box_team_stats['eFG%'],
-            three_point_attempt_rate=home_box_team_stats['TPAr'],
+            three_point_attempt_rate=home_box_team_stats['3PAr'],
             free_throw_attempt_rate=home_box_team_stats['FTr'],
             offensive_rebound_pct=home_box_team_stats['ORB%'],
             defensive_rebound_pct=home_box_team_stats['DRB%'],
@@ -461,7 +461,7 @@ def initialize_database(year, database='mock_nba_database'):
             usage_pct=home_box_team_stats['USG%'],
             offensive_rating=home_box_team_stats['ORtg'],
             defensive_rating=home_box_team_stats['DRtg'],
-            box_plus_minus=home_box_team_stats['BPM'],
+            box_plus_minus=None,
             pace=home_team_game_summary['Pace'],
             free_throws_per_field_goal_attempt=home_team_game_summary['FT/FGA'],
         )
@@ -471,26 +471,28 @@ def initialize_database(year, database='mock_nba_database'):
             player_name = home_box['Players'][i]
             player_code = home_box['Player Code'][i]
             player = session.query(Player).filter(
-                Player.unique_code == player_code and Player.friendly_name == player_name)
+                Player.unique_code == player_code and Player.friendly_name == player_name).one_or_none()
 
-            if player == None:
+            if player is None:
                 player = Player(
                     unique_code=player_code,
                     first_name=player_name.split()[0],
                     last_name=player_name.split()[1],
                     friendly_name=player_name
                 )
+
                 session.add(player)
                 session.flush()
 
                 player_team = PlayerTeam(
                     player_id=player.id,
                     team_id=game_home_team.team_id,
-                    start_date=to_postgres_timestamp(datetime.datetime.now())
+                    # TODO: Replace datetime.now to actual date.
+                    start_date=datetime.now()
                 )
                 session.add(player_team)
 
-            if (home_box['MP'][i].contains("Did Not")):
+            if "Did Not" in home_box['MP'][i]:
                 game_player_log = GamePlayerLog(
                     player_id=player.id,
                     game_team_id=game_home_team.id
@@ -503,13 +505,13 @@ def initialize_database(year, database='mock_nba_database'):
                     minutes_played=home_box['MP'][i],
                     field_goals=home_box['FG'][i],
                     field_goal_attempts=home_box['FGA'][i],
-                    field_goal_pct=home_box['FG%'][i],
+                    field_goal_pct=home_box['FG%'][i] if (home_box['FG%'][i] != '') else None,
                     three_pointers=home_box['3P'][i],
                     three_point_attempts=home_box['3PA'][i],
-                    three_point_pct=home_box['3P%'][i],
+                    three_point_pct=home_box['3P%'][i] if (home_box['3P%'][i] != '') else None,
                     free_throws=home_box['FT'][i],
                     free_throw_attempts=home_box['FTA'][i],
-                    free_throw_pct=home_box['FT%'][i],
+                    free_throw_pct=home_box['FT%'][i] if (home_box['FT%'][i] != '') else None,
                     offensive_rebounds=home_box['ORB'][i],
                     defensive_rebounds=home_box['DRB'][i],
                     total_rebounds=home_box['TRB'][i],
@@ -521,17 +523,17 @@ def initialize_database(year, database='mock_nba_database'):
                     points=home_box['PTS'][i],
                     plus_minus=home_box['+/-'][i],
 
-                    true_shooting_pct=home_box['TS%'][i],
-                    effective_field_goal_pct=home_box['eFG%'][i],
-                    three_point_attempt_rate=home_box['TPAr'][i],
-                    free_throw_attempt_rate=home_box['FTr'][i],
+                    true_shooting_pct=home_box['TS%'][i] if (away_box['TS%'][i] != '') else None,
+                    effective_field_goal_pct=home_box['eFG%'][i] if (home_box['eFG%'][i] != '') else None,
+                    three_point_attempt_rate=home_box['3PAr'][i] if (home_box['3PAr'][i] != '') else None,
+                    free_throw_attempt_rate=home_box['FTr'][i] if (home_box['FTr'][i] != '') else None,
                     offensive_rebound_pct=home_box['ORB%'][i],
                     defensive_rebound_pct=home_box['DRB%'][i],
                     total_rebound_pct=home_box['TRB%'][i],
                     assist_pct=home_box['AST%'][i],
                     steal_pct=home_box['STL%'][i],
                     block_pct=home_box['BLK%'][i],
-                    turnover_pct=home_box['TOV%'][i],
+                    turnover_pct=home_box['TOV%'][i] if (home_box['TOV%'][i] != '') else None,
                     usage_pct=home_box['USG%'][i],
                     offensive_rating=home_box['ORtg'][i],
                     defensive_rating=home_box['DRtg'][i],
@@ -541,7 +543,7 @@ def initialize_database(year, database='mock_nba_database'):
 
         game_away_team = GameTeam(
             game_id=game.id,
-            team_id=session.query(Team.id).filter(Team.team_name == away_team),
+            team_id=session.query(Team.id).filter(Team.name == away_team),
             team_home_away_type=2
         )
         session.add(game_away_team)
@@ -576,11 +578,11 @@ def initialize_database(year, database='mock_nba_database'):
             turnovers=away_box_team_stats['TOV'],
             personal_fouls=away_box_team_stats['PF'],
             points=away_box_team_stats['PTS'],
-            plus_minus=away_box_team_stats['+/-'],
+            plus_minus=None,
 
             true_shooting_pct=away_box_team_stats['TS%'],
             effective_field_goal_pct=away_box_team_stats['eFG%'],
-            three_point_attempt_rate=away_box_team_stats['TPAr'],
+            three_point_attempt_rate=away_box_team_stats['3PAr'],
             free_throw_attempt_rate=away_box_team_stats['FTr'],
             offensive_rebound_pct=away_box_team_stats['ORB%'],
             defensive_rebound_pct=away_box_team_stats['DRB%'],
@@ -592,7 +594,7 @@ def initialize_database(year, database='mock_nba_database'):
             usage_pct=away_box_team_stats['USG%'],
             offensive_rating=away_box_team_stats['ORtg'],
             defensive_rating=away_box_team_stats['DRtg'],
-            box_plus_minus=away_box_team_stats['BPM'],
+            box_plus_minus=None,
             pace=away_team_game_summary['Pace'],
             free_throws_per_field_goal_attempt=away_team_game_summary['FT/FGA'],
         )
@@ -602,7 +604,7 @@ def initialize_database(year, database='mock_nba_database'):
             player_name = away_box['Players'][i]
             player_code = away_box['Player Code'][i]
             player = session.query(Player).filter(
-                Player.unique_code == player_code and Player.friendly_name == player_name)
+                Player.unique_code == player_code and Player.friendly_name == player_name).one_or_none()
 
             if player is None:
                 player = Player(
@@ -611,9 +613,19 @@ def initialize_database(year, database='mock_nba_database'):
                     last_name=player_name.split()[1],
                     friendly_name=player_name
                 )
+
                 session.add(player)
                 session.flush()
-            if away_box['MP'][i].contains("Did Not"):
+
+                player_team = PlayerTeam(
+                    player_id=player.id,
+                    team_id=game_away_team.team_id,
+                    # TODO: Replace datetime.now to actual date.
+                    start_date=datetime.now()
+                )
+                session.add(player_team)
+
+            if "Did Not" in away_box['MP'][i]:
                 game_player_log = GamePlayerLog(
                     player_id=player.id,
                     game_team_id=game_away_team.id
@@ -626,13 +638,13 @@ def initialize_database(year, database='mock_nba_database'):
                     minutes_played=away_box['MP'][i],
                     field_goals=away_box['FG'][i],
                     field_goal_attempts=away_box['FGA'][i],
-                    field_goal_pct=away_box['FG%'][i],
+                    field_goal_pct=away_box['FG%'][i] if (away_box['FG%'][i] != '') else None,
                     three_pointers=away_box['3P'][i],
                     three_point_attempts=away_box['3PA'][i],
-                    three_point_pct=away_box['3P%'][i],
+                    three_point_pct=away_box['3P%'][i] if (away_box['3P%'][i] != '') else None,
                     free_throws=away_box['FT'][i],
                     free_throw_attempts=away_box['FTA'][i],
-                    free_throw_pct=away_box['FT%'][i],
+                    free_throw_pct=away_box['FT%'][i] if (away_box['FT%'][i] != '') else None,
                     offensive_rebounds=away_box['ORB'][i],
                     defensive_rebounds=away_box['DRB'][i],
                     total_rebounds=away_box['TRB'][i],
@@ -644,17 +656,17 @@ def initialize_database(year, database='mock_nba_database'):
                     points=away_box['PTS'][i],
                     plus_minus=away_box['+/-'][i],
 
-                    true_shooting_pct=away_box['TS%'][i],
-                    effective_field_goal_pct=away_box['eFG%'][i],
-                    three_point_attempt_rate=away_box['TPAr'][i],
-                    free_throw_attempt_rate=away_box['FTr'][i],
+                    true_shooting_pct=away_box['TS%'][i] if (away_box['TS%'][i] != '') else None,
+                    effective_field_goal_pct=away_box['eFG%'][i] if (away_box['eFG%'][i] != '') else None,
+                    three_point_attempt_rate=away_box['3PAr'][i] if (away_box['3PAr'][i] != '') else None,
+                    free_throw_attempt_rate=away_box['FTr'][i] if (away_box['FTr'][i] != '') else None,
                     offensive_rebound_pct=away_box['ORB%'][i],
                     defensive_rebound_pct=away_box['DRB%'][i],
                     total_rebound_pct=away_box['TRB%'][i],
                     assist_pct=away_box['AST%'][i],
                     steal_pct=away_box['STL%'][i],
                     block_pct=away_box['BLK%'][i],
-                    turnover_pct=away_box['TOV%'][i],
+                    turnover_pct=away_box['TOV%'][i] if (away_box['TOV%'][i] != '') else None,
                     usage_pct=away_box['USG%'][i],
                     offensive_rating=away_box['ORtg'][i],
                     defensive_rating=away_box['DRtg'][i],
@@ -836,7 +848,7 @@ def populate_team_tables(session: Session, season_id) -> None:
             ts = TeamStats(
                 team_id=t.id,
                 type=i + 1,
-                minutes_played=0,
+                minutes_played="",
                 field_goals=0,
                 field_goal_attempts=0,
                 three_pointers=0,
@@ -901,6 +913,5 @@ def to_postgres_timestamp(date_string: str) -> str:
     postgres_timestamp = date_obj.strftime('%Y-%m-%d %H:%M:%S')
 
     return postgres_timestamp
-
 
 # initialize_database(2022)
