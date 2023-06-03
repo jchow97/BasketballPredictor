@@ -4,6 +4,7 @@ import pandas as pd
 import requests
 import datetime
 from src.common.constants import TEAM_ABBRV, MONTHS_ABBRV, MONTHS
+import time
 
 """
 The scraper should be responsible for generating data frames to form the database. Adding entities to the database 
@@ -34,6 +35,8 @@ class Scraper:
         # TODO: Consider upgrading Agent to an entire request header
         self.__USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) ' \
                             'Chrome/103.0.0.0 Safari/537.36'
+        self.__accessCounter = 0
+        self.__timeoutSeconds = 3
 
     """
     Scrapes every specified NBA season (seasons, schedules, matches, teams, players) 
@@ -71,7 +74,10 @@ class Scraper:
                 url = f"https://www.basketball-reference.com/leagues/NBA_{season}_games-{month}.html"
 
                 if html_file is None:
+                    time.sleep(self.__timeoutSeconds)
                     html = requests.get(url, headers={'User-Agent': self.__USER_AGENT})
+                    self.__accessCounter += 1
+                    print(self.__accessCounter)
                 else:
                     html = open(html_file).read()
 
@@ -129,7 +135,10 @@ class Scraper:
             url = f'https://www.basketball-reference.com/boxscores/{game_code}.html'
 
             if html_file is None:
+                time.sleep(self.__timeoutSeconds)
                 html = requests.get(url, headers={'User-Agent': self.__USER_AGENT})
+                self.__accessCounter += 1
+                print(self.__accessCounter)
             else:
                 html = open(html_file).read()
 
@@ -236,7 +245,10 @@ class Scraper:
 
         try:
             if html_file is None:
+                time.sleep(self.__timeoutSeconds)
                 html = requests.get(url, headers={'User-Agent': self.__USER_AGENT})
+                self.__accessCounter += 1
+                print(self.__accessCounter)
             else:
                 html = open(html_file).read()
 
