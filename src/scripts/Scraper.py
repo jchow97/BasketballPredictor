@@ -56,11 +56,11 @@ class Scraper:
     Scrapes one NBA Season Schedule and returns a collection of schedules.
 
     @param season - NBA Season to scrape. Note: the 2021-2022 season would be season 2022
-    @param html_file - relative path for specified html file. Default is None. If specified, overrides specified season.
+    @param url - URL for specific season. Default is None. If specified, overrides specified season.
     @return pandas DataFrame of the season schedule.
     """
 
-    def scrape_nba_season(self, season, html_file=None) -> pd.DataFrame or None:
+    def scrape_nba_season(self, season, url=None) -> pd.DataFrame or None:
         print(f"Beginning scrape for {season} season.")
         # TODO: add handling for july, aug, sept
         months = ["october", "november", "december", "january", "february", "march", "april", "may", "june"]
@@ -71,15 +71,13 @@ class Scraper:
         for month in months:
             # Open URL, request the html, and create BeautifulSoup object
             try:
-                url = f"https://www.basketball-reference.com/leagues/NBA_{season}_games-{month}.html"
+                if url is None:
+                    url = f"https://www.basketball-reference.com/leagues/NBA_{season}_games-{month}.html"
 
-                if html_file is None:
-                    time.sleep(self.__timeoutSeconds)
-                    html = requests.get(url, headers={'User-Agent': self.__USER_AGENT})
-                    self.__accessCounter += 1
-                    print("count: " + str(self.__accessCounter) + " url: " + url)
-                else:
-                    html = open(html_file).read()
+                time.sleep(self.__timeoutSeconds)
+                html = requests.get(url, headers={'User-Agent': self.__USER_AGENT})
+                self.__accessCounter += 1
+                print("count: " + str(self.__accessCounter) + " url: " + url)
 
                 if html.status_code == 404:
                     print("The month or season does not exist.")
@@ -125,22 +123,20 @@ class Scraper:
     Scrape the nba match and returns a collection of data frames from the match.
     
     @param game_code - game_code string for the website
-    @param html_file - relative path for specified html file. Default is None. If specified, overrides specified season.
+    @param url - URL for specific game. Default is None. If specified, overrides specified season.
     @return Collection of pandas DataFrames
     """
 
-    def scrape_nba_match(self, game_code, html_file=None) -> list[pd.DataFrame]:
+    def scrape_nba_match(self, game_code, url=None) -> list[pd.DataFrame]:
         # TODO: take the match scraper from old scraper, then remove the unneeded parts.
         try:
-            url = f'https://www.basketball-reference.com/boxscores/{game_code}.html'
+            if url is None:
+                url = f'https://www.basketball-reference.com/boxscores/{game_code}.html'
 
-            if html_file is None:
-                time.sleep(self.__timeoutSeconds)
-                html = requests.get(url, headers={'User-Agent': self.__USER_AGENT})
-                self.__accessCounter += 1
-                print("count: " + str(self.__accessCounter) + " url: " + url)
-            else:
-                html = open(html_file).read()
+            time.sleep(self.__timeoutSeconds)
+            html = requests.get(url, headers={'User-Agent': self.__USER_AGENT})
+            self.__accessCounter += 1
+            print("count: " + str(self.__accessCounter) + " url: " + url)
 
             soup = BeautifulSoup(html.text, 'lxml')
         except HTTPError as e:
@@ -236,21 +232,20 @@ class Scraper:
     Scrapes an NBA Player and returns a collection of data frames on the player page.
 
     @param player_code - unique player code used to find their stats page.
+    @param url - Specific url of player to scrape. Default is None If specified, ignores player_code input.
     @return pandas DataFrame of player stats.
     """
 
-    def scrape_nba_player(self, player_code, html_file=None) -> pd.DataFrame or None:
+    def scrape_nba_player(self, player_code, url=None) -> pd.DataFrame or None:
         last_initial = player_code[0]
-        url = f'https://www.basketball-reference.com/players/{last_initial}/{player_code}.html'
+        if url is None:
+            url = f'https://www.basketball-reference.com/players/{last_initial}/{player_code}.html'
 
         try:
-            if html_file is None:
-                time.sleep(self.__timeoutSeconds)
-                html = requests.get(url, headers={'User-Agent': self.__USER_AGENT})
-                self.__accessCounter += 1
-                print("count: " + str(self.__accessCounter) + " url: " + url)
-            else:
-                html = open(html_file).read()
+            time.sleep(self.__timeoutSeconds)
+            html = requests.get(url, headers={'User-Agent': self.__USER_AGENT})
+            self.__accessCounter += 1
+            print("count: " + str(self.__accessCounter) + " url: " + url)
 
             soup = BeautifulSoup(html.text, 'lxml')
         except HTTPError as e:
