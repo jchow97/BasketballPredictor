@@ -27,41 +27,41 @@ class GamePlayerLog(Base):
     player_id = Column(Integer, ForeignKey("player.id"))
     game_team_id = Column(Integer, ForeignKey("game_team.id"))
 
-    minutes_played = Column(String(6))
-    field_goals = Column(Integer)
-    field_goal_attempts = Column(Integer)
+    minutes_played = Column(String, default=None)
+    field_goals = Column(Integer, default=None)
+    field_goal_attempts = Column(Integer, default=None)
     field_goal_pct = Column(DECIMAL, default=None)
-    three_pointers = Column(Integer)
-    three_point_attempts = Column(Integer)
+    three_pointers = Column(Integer, default=None)
+    three_point_attempts = Column(Integer, default=None)
     three_point_pct = Column(DECIMAL, default=None)
-    free_throws = Column(Integer)
-    free_throw_attempts = Column(Integer)
+    free_throws = Column(Integer, default=None)
+    free_throw_attempts = Column(Integer, default=None)
     free_throw_pct = Column(DECIMAL, default=None)
-    offensive_rebounds = Column(Integer)
-    defensive_rebounds = Column(Integer)
-    total_rebounds = Column(Integer)
-    assists = Column(Integer)
-    steals = Column(Integer)
-    blocks = Column(Integer)
-    turnovers = Column(Integer)
-    personal_fouls = Column(Integer)
-    points = Column(Integer)
-    plus_minus = Column(Integer)
+    offensive_rebounds = Column(Integer, default=None)
+    defensive_rebounds = Column(Integer, default=None)
+    total_rebounds = Column(Integer, default=None)
+    assists = Column(Integer, default=None)
+    steals = Column(Integer, default=None)
+    blocks = Column(Integer, default=None)
+    turnovers = Column(Integer, default=None)
+    personal_fouls = Column(Integer, default=None)
+    points = Column(Integer, default=None)
+    plus_minus = Column(Integer, default=None)
     true_shooting_pct = Column(DECIMAL, default=None)
     effective_field_goal_pct = Column(DECIMAL, default=None)
     three_point_attempt_rate = Column(DECIMAL, default=None)
     free_throw_attempt_rate = Column(DECIMAL, default=None)
-    offensive_rebound_pct = Column(DECIMAL)
-    defensive_rebound_pct = Column(DECIMAL)
-    total_rebound_pct = Column(DECIMAL)
-    assist_pct = Column(DECIMAL)
-    steal_pct = Column(DECIMAL)
-    block_pct = Column(DECIMAL)
-    turnover_pct = Column(DECIMAL)
-    usage_pct = Column(DECIMAL)
-    offensive_rating = Column(DECIMAL)
-    defensive_rating = Column(DECIMAL)
-    box_plus_minus = Column(DECIMAL)
+    offensive_rebound_pct = Column(DECIMAL, default=None)
+    defensive_rebound_pct = Column(DECIMAL, default=None)
+    total_rebound_pct = Column(DECIMAL, default=None)
+    assist_pct = Column(DECIMAL, default=None)
+    steal_pct = Column(DECIMAL, default=None)
+    block_pct = Column(DECIMAL, default=None)
+    turnover_pct = Column(DECIMAL, default=None)
+    usage_pct = Column(DECIMAL, default=None)
+    offensive_rating = Column(DECIMAL, default=None)
+    defensive_rating = Column(DECIMAL, default=None)
+    box_plus_minus = Column(DECIMAL, default=None)
 
 
 class GameTeam(Base):
@@ -492,7 +492,7 @@ def initialize_database(year, database='mock_nba_database'):
                 )
                 session.add(player_team)
 
-            if "Did Not" in home_box['MP'][i]:
+            if ("Did Not" in home_box['MP'][i]) or ("Not With" in home_box['MP'][i]):
                 game_player_log = GamePlayerLog(
                     player_id=player.id,
                     game_team_id=game_home_team.id
@@ -502,42 +502,42 @@ def initialize_database(year, database='mock_nba_database'):
                     player_id=player.id,
                     game_team_id=game_home_team.id,
 
-                    minutes_played=home_box['MP'][i],
-                    field_goals=home_box['FG'][i],
-                    field_goal_attempts=home_box['FGA'][i],
+                    minutes_played=home_box['MP'][i] if (home_box['MP'][i] != '') else None,
+                    field_goals=home_box['FG'][i] if (home_box['FG'][i] != '') else None,
+                    field_goal_attempts=home_box['FGA'][i] if (home_box['FGA'][i] != '') else None,
                     field_goal_pct=home_box['FG%'][i] if (home_box['FG%'][i] != '') else None,
-                    three_pointers=home_box['3P'][i],
-                    three_point_attempts=home_box['3PA'][i],
+                    three_pointers=home_box['3P'][i] if (home_box['3P'][i] != '') else None,
+                    three_point_attempts=home_box['3PA'][i] if (home_box['3PA'][i] != '') else None,
                     three_point_pct=home_box['3P%'][i] if (home_box['3P%'][i] != '') else None,
-                    free_throws=home_box['FT'][i],
-                    free_throw_attempts=home_box['FTA'][i],
+                    free_throws=home_box['FT'][i] if (home_box['FT'][i] != '') else None,
+                    free_throw_attempts=home_box['FTA'][i] if (home_box['FTA'][i] != '') else None,
                     free_throw_pct=home_box['FT%'][i] if (home_box['FT%'][i] != '') else None,
-                    offensive_rebounds=home_box['ORB'][i],
-                    defensive_rebounds=home_box['DRB'][i],
-                    total_rebounds=home_box['TRB'][i],
-                    assists=home_box['AST'][i],
-                    steals=home_box['STL'][i],
-                    blocks=home_box['BLK'][i],
-                    turnovers=home_box['TOV'][i],
-                    personal_fouls=home_box['PF'][i],
-                    points=home_box['PTS'][i],
-                    plus_minus=home_box['+/-'][i],
+                    offensive_rebounds=home_box['ORB'][i] if (home_box['ORB'][i] != '') else None,
+                    defensive_rebounds=home_box['DRB'][i] if (home_box['DRB'][i] != '') else None,
+                    total_rebounds=home_box['TRB'][i] if (home_box['TRB'][i] != '') else None,
+                    assists=home_box['AST'][i] if (home_box['AST'][i] != '') else None,
+                    steals=home_box['STL'][i] if (home_box['STL'][i] != '') else None,
+                    blocks=home_box['BLK'][i] if (home_box['BLK'][i] != '') else None,
+                    turnovers=home_box['TOV'][i] if (home_box['TOV'][i] != '') else None,
+                    personal_fouls=home_box['PF'][i] if (home_box['PF'][i] != '') else None,
+                    points=home_box['PTS'][i] if (home_box['PTS'][i] != '') else None,
+                    plus_minus=home_box['+/-'][i] if (home_box['+/-'][i] != '') else None,
 
-                    true_shooting_pct=home_box['TS%'][i] if (away_box['TS%'][i] != '') else None,
+                    true_shooting_pct=home_box['TS%'][i] if (home_box['TS%'][i] != '') else None,
                     effective_field_goal_pct=home_box['eFG%'][i] if (home_box['eFG%'][i] != '') else None,
                     three_point_attempt_rate=home_box['3PAr'][i] if (home_box['3PAr'][i] != '') else None,
                     free_throw_attempt_rate=home_box['FTr'][i] if (home_box['FTr'][i] != '') else None,
-                    offensive_rebound_pct=home_box['ORB%'][i],
-                    defensive_rebound_pct=home_box['DRB%'][i],
-                    total_rebound_pct=home_box['TRB%'][i],
-                    assist_pct=home_box['AST%'][i],
-                    steal_pct=home_box['STL%'][i],
-                    block_pct=home_box['BLK%'][i],
+                    offensive_rebound_pct=home_box['ORB%'][i] if (home_box['ORB%'][i] != '') else None,
+                    defensive_rebound_pct=home_box['DRB%'][i] if (home_box['DRB%'][i] != '') else None,
+                    total_rebound_pct=home_box['TRB%'][i] if (home_box['TRB%'][i] != '') else None,
+                    assist_pct=home_box['AST%'][i] if (home_box['AST%'][i] != '') else None,
+                    steal_pct=home_box['STL%'][i] if (home_box['STL%'][i] != '') else None,
+                    block_pct=home_box['BLK%'][i] if (home_box['BLK%'][i] != '') else None,
                     turnover_pct=home_box['TOV%'][i] if (home_box['TOV%'][i] != '') else None,
-                    usage_pct=home_box['USG%'][i],
-                    offensive_rating=home_box['ORtg'][i],
-                    defensive_rating=home_box['DRtg'][i],
-                    box_plus_minus=home_box['BPM'][i]
+                    usage_pct=home_box['USG%'][i] if (home_box['USG%'][i] != '') else None,
+                    offensive_rating=home_box['ORtg'][i] if (home_box['ORtg'][i] != '') else None,
+                    defensive_rating=home_box['DRtg'][i] if (home_box['DRtg'][i] != '') else None,
+                    box_plus_minus=home_box['BPM'][i] if (home_box['BPM'][i] != '') else None
                 )
             session.add(game_player_log)
 
@@ -625,52 +625,53 @@ def initialize_database(year, database='mock_nba_database'):
                 )
                 session.add(player_team)
 
-            if "Did Not" in away_box['MP'][i]:
+            if ("Did Not" in away_box['MP'][i]) or ("Not In" in away_box['MP']):
                 game_player_log = GamePlayerLog(
                     player_id=player.id,
-                    game_team_id=game_away_team.id
+                    game_team_id=game_away_team.id,
+                    minutes_played=away_box['MP'][i] if (away_box['MP'][i] != '') else None
                 )
             else:
                 game_player_log = GamePlayerLog(
                     player_id=player.id,
                     game_team_id=game_away_team.id,
 
-                    minutes_played=away_box['MP'][i],
-                    field_goals=away_box['FG'][i],
-                    field_goal_attempts=away_box['FGA'][i],
+                    minutes_played=away_box['MP'][i] if (away_box['MP'][i] != '') else None,
+                    field_goals=away_box['FG'][i] if (away_box['FG'][i] != '') else None,
+                    field_goal_attempts=away_box['FGA'][i] if (away_box['FGA'][i] != '') else None,
                     field_goal_pct=away_box['FG%'][i] if (away_box['FG%'][i] != '') else None,
-                    three_pointers=away_box['3P'][i],
-                    three_point_attempts=away_box['3PA'][i],
+                    three_pointers=away_box['3P'][i] if (away_box['3P'][i] != '') else None,
+                    three_point_attempts=away_box['3PA'][i] if (away_box['3PA'][i] != '') else None,
                     three_point_pct=away_box['3P%'][i] if (away_box['3P%'][i] != '') else None,
-                    free_throws=away_box['FT'][i],
-                    free_throw_attempts=away_box['FTA'][i],
+                    free_throws=away_box['FT'][i] if (away_box['FT'][i] != '') else None,
+                    free_throw_attempts=away_box['FTA'][i] if (away_box['FTA'][i] != '') else None,
                     free_throw_pct=away_box['FT%'][i] if (away_box['FT%'][i] != '') else None,
-                    offensive_rebounds=away_box['ORB'][i],
-                    defensive_rebounds=away_box['DRB'][i],
-                    total_rebounds=away_box['TRB'][i],
-                    assists=away_box['AST'][i],
-                    steals=away_box['STL'][i],
-                    blocks=away_box['BLK'][i],
-                    turnovers=away_box['TOV'][i],
-                    personal_fouls=away_box['PF'][i],
-                    points=away_box['PTS'][i],
-                    plus_minus=away_box['+/-'][i],
+                    offensive_rebounds=away_box['ORB'][i] if (away_box['ORB'][i] != '') else None,
+                    defensive_rebounds=away_box['DRB'][i] if (away_box['DRB'][i] != '') else None,
+                    total_rebounds=away_box['TRB'][i] if (away_box['TRB'][i] != '') else None,
+                    assists=away_box['AST'][i] if (away_box['AST'][i] != '') else None,
+                    steals=away_box['STL'][i] if (away_box['STL'][i] != '') else None,
+                    blocks=away_box['BLK'][i] if (away_box['BLK'][i] != '') else None,
+                    turnovers=away_box['TOV'][i] if (away_box['TOV'][i] != '') else None,
+                    personal_fouls=away_box['PF'][i] if (away_box['PF'][i] != '') else None,
+                    points=away_box['PTS'][i] if (away_box['PTS'][i] != '') else None,
+                    plus_minus=away_box['+/-'][i] if (away_box['+/-'][i] != '') else None,
 
                     true_shooting_pct=away_box['TS%'][i] if (away_box['TS%'][i] != '') else None,
                     effective_field_goal_pct=away_box['eFG%'][i] if (away_box['eFG%'][i] != '') else None,
                     three_point_attempt_rate=away_box['3PAr'][i] if (away_box['3PAr'][i] != '') else None,
                     free_throw_attempt_rate=away_box['FTr'][i] if (away_box['FTr'][i] != '') else None,
-                    offensive_rebound_pct=away_box['ORB%'][i],
-                    defensive_rebound_pct=away_box['DRB%'][i],
-                    total_rebound_pct=away_box['TRB%'][i],
-                    assist_pct=away_box['AST%'][i],
-                    steal_pct=away_box['STL%'][i],
-                    block_pct=away_box['BLK%'][i],
+                    offensive_rebound_pct=away_box['ORB%'][i] if (away_box['ORB%'][i] != '') else None,
+                    defensive_rebound_pct=away_box['DRB%'][i] if (away_box['DRB%'][i] != '') else None,
+                    total_rebound_pct=away_box['TRB%'][i] if (away_box['TRB%'][i] != '') else None,
+                    assist_pct=away_box['AST%'][i] if (away_box['AST%'][i] != '') else None,
+                    steal_pct=away_box['STL%'][i] if (away_box['STL%'][i] != '') else None,
+                    block_pct=away_box['BLK%'][i] if (away_box['BLK%'][i] != '') else None,
                     turnover_pct=away_box['TOV%'][i] if (away_box['TOV%'][i] != '') else None,
-                    usage_pct=away_box['USG%'][i],
-                    offensive_rating=away_box['ORtg'][i],
-                    defensive_rating=away_box['DRtg'][i],
-                    box_plus_minus=away_box['BPM'][i]
+                    usage_pct=away_box['USG%'][i] if (away_box['USG%'][i] != '') else None,
+                    offensive_rating=away_box['ORtg'][i] if (away_box['ORtg'][i] != '') else None,
+                    defensive_rating=away_box['DRtg'][i] if (away_box['DRtg'][i] != '') else None,
+                    box_plus_minus=away_box['BPM'][i] if (away_box['BPM'][i] != '') else None
                 )
             session.add(game_player_log)
 
