@@ -177,11 +177,18 @@ class Scraper:
             box_headers_basic = [th.get_text() for th in soup.find('table').find_all('th')][2:23]
             box_headers_basic[0] = 'Players'
 
-            if len(ls_headers) > 6:  # checking if there was OT need to make dynamic (e.g. 2OT, 3OT)
-                i = len(ls_headers) - 6
-                box_headers_adv = [th.get_text() for th in soup.find_all('table')[7 + i].find_all('th')][4:19]
-            else:
-                box_headers_adv = [th.get_text() for th in soup.find_all('table')[7].find_all('th')][4:19]
+            # Changed adv headers to be statically set here, rather than dynamically scraped because Play-In Game's don't
+            # track BPM.
+            # TODO: Add dynamic handling for Play-In Games (no BPM).
+
+            # if len(ls_headers) > 6:  # checking if there was OT need to make dynamic (e.g. 2OT, 3OT)
+            #     i = len(ls_headers) - 6
+            #     box_headers_adv = [th.get_text() for th in soup.find_all('table')[7 + i].find_all('th')][4:19]
+            # else:
+            #     box_headers_adv = [th.get_text() for th in soup.find_all('table')[7].find_all('th')][4:19]
+
+            box_headers_adv = ['TS%', 'eFG%', '3PAr', 'FTr', 'ORB%', 'DRB%', 'TRB%', 'AST%', 'STL%', 'BLK%', 'TOV%',
+                               'USG%', 'ORtg', 'DRtg', 'BPM']
 
             # Add player code to basic box header.
             box_headers_basic.insert(1, "Player Code")
@@ -202,12 +209,22 @@ class Scraper:
             # TODO parse_row_data() is too simple/standard for this table at the moment.
             v_rows_basic, v_rows_adv = self.__parse_box_scores(visitor_basic_table, visitor_adv_table)
 
+            # TODO: Fix spaghetti code that handles no BPM in play-in games.
+            if len(v_rows_adv[0]) < 15:
+                for row in v_rows_adv:
+                    row.append(None)
+
             v_basic_df = pd.DataFrame(v_rows_basic, columns=box_headers_basic)
             v_adv_df = pd.DataFrame(v_rows_adv, columns=box_headers_adv)
             v_box_score = pd.concat([v_basic_df, v_adv_df], axis=1)
 
             # Scrape the values in each row for the home team in both Basic and Advanced Box Scores.
             h_rows_basic, h_rows_adv = self.__parse_box_scores(home_basic_table, home_adv_table)
+
+            # TODO: Fix spaghetti code that handles no BPM in play-in games.
+            if len(h_rows_adv[0]) < 15:
+                for row in h_rows_adv:
+                    row.append(None)
 
             h_basic_df = pd.DataFrame(h_rows_basic, columns=box_headers_basic)
             h_adv_df = pd.DataFrame(h_rows_adv, columns=box_headers_adv)
