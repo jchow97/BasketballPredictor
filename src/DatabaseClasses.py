@@ -410,7 +410,7 @@ def initialize_database(year, database='mock_nba_database'):
 
         game_home_team = GameTeam(
             game_id=game.id,
-            team_id=session.query(Team.id).filter(Team.name == home_team),
+            team_id=session.query(Team.id).filter(Team.name == home_team).scalar_subquery(),
             team_home_away_type=1
         )
         session.add(game_home_team)
@@ -543,7 +543,7 @@ def initialize_database(year, database='mock_nba_database'):
 
         game_away_team = GameTeam(
             game_id=game.id,
-            team_id=session.query(Team.id).filter(Team.name == away_team),
+            team_id=session.query(Team.id).filter(Team.name == away_team).scalar_subquery(),
             team_home_away_type=2
         )
         session.add(game_away_team)
