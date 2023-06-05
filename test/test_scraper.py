@@ -13,7 +13,7 @@ class TestScraper(unittest.TestCase):
 
 
     def test_scrape_nba_match(self):
-        self.test_scraper.scrape_nba_match('202110200CHO', 'https://www.basketball-reference.com/boxscores/202110200CHO.html')
+        self.test_scraper.scrape_nba_match('202110190MIL', 'https://www.basketball-reference.com/boxscores/202110190MIL.html')
 
 
 if __name__ == "__main__":

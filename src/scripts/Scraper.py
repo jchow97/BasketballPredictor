@@ -6,6 +6,7 @@ import datetime
 from src.common.constants import TEAM_ABBRV, MONTHS_ABBRV, MONTHS
 import time
 import re
+from unidecode import unidecode
 
 """
 The scraper should be responsible for generating data frames to form the database. Adding entities to the database 
@@ -286,34 +287,6 @@ class Scraper:
     # HELPER FUNCTIONS
 
     """
-    Get Player Code Base (e.g. lillada of lillada01)
-
-    @param name - Name of the player.
-    @return str - player code that was determined or None if not a player.
-    """
-
-    def __get_player_code_base(self, name) -> str or None:
-        player_code_base = ''
-        if name == "Team Totals":
-            return None
-
-        player_name = name.split()
-
-        ln_length = min(len(player_name[1]), 5)
-        for i in range(ln_length):
-            player_code_base = player_code_base + player_name[1][i]
-
-        player_name[0] = re.sub('[^a-zA-Z]', '', player_name[0])
-
-        fn_length = min(len(player_name[0]), 2)
-        for i in range(fn_length):
-            player_code_base = player_code_base + player_name[0][i]
-
-        player_code_base = player_code_base.lower()
-
-        return player_code_base
-
-    """
     Converts date string from basketball-reference to PostgreSQL date format
     @param date_string - Basketball-reference date string format.
     @return string - formatted date string.
@@ -387,11 +360,10 @@ class Scraper:
                 basic_data = [td.get_text() for td in basic_table[i].find_all('td')]
                 basic_data.insert(0, player)
 
-                player_code = ""
-                player_code_base = self.__get_player_code_base(player)
-                if player_code_base is not None:
-                    player_code = \
-                        basic_table[i].select_one(f"a[href*={player_code_base}]")['href'].split('/')[-1].split('.')[0]
+                # Get Player Code
+                player_code = ''
+                if player != 'Team Totals':
+                    player_code = basic_table[i].find('a', string=player)['href'].split('/')[-1].split('.')[0]
 
                 basic_data.insert(1, player_code)
 
