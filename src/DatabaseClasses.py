@@ -322,7 +322,7 @@ class TeamAdvancedStats(Base):
 
 
 def initialize_database(year, database='mock_nba_database'):
-    # TODO: Figure out how to use drop tables and create tables in code below through SQLAlchemy,
+    # TODO: (#2) Figure out how to use drop tables and create tables in code below through SQLAlchemy,
     #  instead of dropping the entire database.
     conn = psycopg2.connect("dbname=nba_master user=jeffreychow")
     conn.autocommit = True
@@ -363,10 +363,12 @@ def initialize_database(year, database='mock_nba_database'):
         home_team = schedule_df['Home/Neutral'][i]
         away_team = schedule_df['Visitor/Neutral'][i]
 
+        # TODO: (#3) Correct assignment of game types.
+
         game = Game(
             season_id=season.id,
             # TODO: scrape playoff games too
-            type=1,
+            type=2,  # 2: regular season
             start_datetime=s.to_postgres_date(game_datetime),
             game_code=s.get_game_code(game_datetime, home_team)
         )
@@ -374,34 +376,7 @@ def initialize_database(year, database='mock_nba_database'):
         session.flush()
 
         game_summary, home_box, away_box = s.scrape_nba_match(game.game_code)
-        # TODO: find an example of a box score in old db and use that to help query for team totals row.
         # Game Summary headers: Team | 1 | 2 | 3 | 4 | (OT) | T | Pace | eFG% | TOV% | ORB% | FT/FGA | ORtg
-        """
-        Game Summary Example:
-        Team | one | two | three | four | _OT | T   | Pace | eFG_pct | TOV_pct | ORB_pct | FT_FGA | ORtg  
-       ------+-----+-----+-------+------+-----+-----+------+---------+---------+---------+--------+-------
-        NOP  | 32  | 27  | 24    | 29   | 13  | 125 | 95.6 | .576    | 8.6     | 18.8    | .111   | 118.4
-        CHO  | 27  | 31  | 20    | 34   | 10  | 122 | 95.6 | .515    | 7.5     | 22.4    | .167   | 115.6
-
-            Players      |      MP       | FG | FGA | FG_pct | _3P | _3PA | _3P_pct | FT | FTA | FT_pct | ORB | DRB | TRB | AST | STL | BLK | TOV | PF | PTS | plus_minus | TS_pct | eFG_pct | _3PAr |  FTr  | ORB_pct | DRB_pct | TRB_pct | AST_pct | STL_pct | BLK_pct | TOV_pct | USG_pct | ORtg  | DRtg  |  BPM  
-        ------------------+---------------+----+-----+--------+-----+------+---------+----+-----+--------+-----+-----+-----+-----+-----+-----+-----+----+-----+------------+--------+---------+-------+-------+---------+---------+---------+---------+---------+---------+---------+---------+-------+-------+-------
-        Hassan Whiteside | 33:36         | 7  | 14  | .500   | 0   | 0    |         | 3  | 6   | .500   | 3   | 13  | 16  | 0   | 1   | 2   | 0   | 0  | 17  | +15        | .511   | .500    | .000  | .429  | 11.3    | 40.4    | 27.2    | 0.0     | 1.5     | 4.7     | 0.0     | 22.1    | 117   | 97    | 2.4
-        Wayne Ellington  | 33:07         | 3  | 11  | .273   | 2   | 9    | .222    | 3  | 3   | 1.000  | 0   | 2   | 2   | 5   | 2   | 1   | 0   | 2  | 11  | +13        | .446   | .364    | .818  | .273  | 0.0     | 6.3     | 3.5     | 17.8    | 3.1     | 2.4     | 0.0     | 16.6    | 119   | 104   | 3.5
-        Goran Dragić     | 30:55         | 14 | 23  | .609   | 2   | 5    | .400    | 4  | 4   | 1.000  | 2   | 3   | 5   | 5   | 1   | 0   | 3   | 4  | 34  | +26        | .687   | .652    | .217  | .174  | 8.2     | 10.1    | 9.2     | 33.4    | 1.6     | 0.0     | 10.8    | 40.1    | 132   | 107   | 12.9
-        Rodney McGruder  | 30:27         | 3  | 5   | .600   | 1   | 2    | .500    | 0  | 0   |        | 1   | 2   | 3   | 1   | 0   | 0   | 1   | 4  | 7   | +5         | .700   | .700    | .400  | .000  | 4.1     | 6.9     | 5.6     | 3.9     | 0.0     | 0.0     | 16.7    | 8.8     | 124   | 112   | -3.9
-        Josh McRoberts   | 17:46         | 3  | 8   | .375   | 1   | 3    | .333    | 0  | 0   |        | 3   | 5   | 8   | 5   | 0   | 0   | 1   | 1  | 7   | +4         | .438   | .438    | .375  | .000  | 21.3    | 29.4    | 25.7    | 36.6    | 0.0     | 0.0     | 11.1    | 22.6    | 118   | 106   | 5.9
-        James Johnson    | 30:14         | 6  | 9   | .667   | 0   | 2    | .000    | 2  | 4   | .500   | 2   | 3   | 5   | 3   | 0   | 0   | 2   | 1  | 14  | +7         | .651   | .667    | .222  | .444  | 8.4     | 10.4    | 9.5     | 13.4    | 0.0     | 0.0     | 15.7    | 18.9    | 122   | 111   | 0.2
-        Tyler Johnson    | 29:50         | 5  | 10  | .500   | 1   | 2    | .500    | 0  | 0   |        | 0   | 3   | 3   | 3   | 1   | 0   | 2   | 3  | 11  | -3         | .550   | .550    | .200  | .000  | 0.0     | 10.5    | 5.7     | 13.1    | 1.7     | 0.0     | 16.7    | 18.0    | 102   | 107   | -3.3
-        Josh Richardson  | 29:03         | 4  | 7   | .571   | 2   | 3    | .667    | 0  | 0   |        | 0   | 4   | 4   | 3   | 1   | 0   | 2   | 2  | 10  | -2         | .714   | .714    | .429  | .000  | 0.0     | 14.4    | 7.9     | 12.9    | 1.7     | 0.0     | 22.2    | 13.9    | 117   | 106   | 1.8
-        Willie Reed      | 5:03          | 0  | 1   | .000   | 0   | 0    |         | 1  | 2   | .500   | 0   | 1   | 1   | 0   | 0   | 0   | 0   | 1  | 1   | -10        | .266   | .000    | .000  | 2.000 | 0.0     | 20.7    | 11.3    | 0.0     | 0.0     | 0.0     | 0.0     | 16.6    | 64    | 108   | -15.5
-        Justise Winslow  | Did Not Dress |    |     |        |     |      |         |    |     |        |     |     |     |     |     |     |     |    |     |            |        |         |       |       |         |         |         |         |         |         |         |         |       |       | 
-        Derrick Williams | Did Not Play  |    |     |        |     |      |         |    |     |        |     |     |     |     |     |     |     |    |     |            |        |         |       |       |         |         |         |         |         |         |         |         |       |       | 
-        Udonis Haslem    | Did Not Play  |    |     |        |     |      |         |    |     |        |     |     |     |     |     |     |     |    |     |            |        |         |       |       |         |         |         |         |         |         |         |         |       |       | 
-        Luke Babbitt     | Did Not Play  |    |     |        |     |      |         |    |     |        |     |     |     |     |     |     |     |    |     |            |        |         |       |       |         |         |         |         |         |         |         |         |       |       | 
-        Team Totals      | 240           | 45 | 88  | .511   | 9   | 26   | .346    | 13 | 19  | .684   | 11  | 36  | 47  | 25  | 6   | 3   | 11  | 18 | 112 |            | .581   | .563    | .295  | .216  | 28.9    | 78.3    | 56.0    | 55.6    | 6.3     | 4.9     | 10.2    | 100.0   | 118.1 | 106.5 | 
-        
-        + Player Code 2nd column.
-        """
 
         home_box_team_stats = home_box.iloc[-1]
         home_team_game_summary = game_summary.iloc[1]
@@ -413,6 +388,7 @@ def initialize_database(year, database='mock_nba_database'):
             team_id=session.query(Team.id).filter(Team.name == home_team).scalar_subquery(),
             team_home_away_type=1
         )
+
         session.add(game_home_team)
         session.flush()
 
@@ -677,7 +653,7 @@ def initialize_database(year, database='mock_nba_database'):
 
     session.commit()
 
-    # TODO: Improve PlayerStats table to be able to cover all the other tables on the player page (e.g. per game, total, per 36, playoffs for each, etc).
+    # TODO: (#5) Add advanced analytics tables from player page to PlayerStats
     for player in session.query(Player).all():
         player_stats_df = s.scrape_nba_player(player.unique_code)
 
@@ -768,7 +744,8 @@ Type tables: game_type, player_stats_type, team_home_away_type, team_stats_type
 
 
 def populate_type_tables(session: Session) -> None:
-    # Add Game Types TODO: Expand playoffs into CQF, CSF, CF, F.
+    # Add Game Types
+    # TODO: (#6) Differentiate between playoff games by their rounds in `game_type` table.
     game_types = ["Preseason", "Regular Season", "Play-In Game", "Playoffs"]
     for gt in game_types:
         gt_object = GameType(type=gt)

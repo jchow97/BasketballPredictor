@@ -63,7 +63,7 @@ class Scraper:
 
     def scrape_nba_season(self, season) -> pd.DataFrame or None:
         print(f"Beginning scrape for {season} season.")
-        # TODO: add handling for july, aug, sept
+        # TODO: (#7) Add the summer months (july, aug, sept) to the months being scraped.
         # TODO: revert temporary changes.
         # months = ["october", "november", "december", "january", "february", "march", "april", "may", "june"]
         months = ["june"]
@@ -88,7 +88,7 @@ class Scraper:
             except HTTPError as e:
                 print("An HTTPError occurred!")
                 print(e)
-                # TODO: Add error class for error handling
+                # TODO: (#8) Add exception handling to Scraper class
                 return None
             except:
                 print("Unknown Error")
@@ -129,7 +129,6 @@ class Scraper:
     """
 
     def scrape_nba_match(self, game_code, url=None) -> list[pd.DataFrame]:
-        # TODO: take the match scraper from old scraper, then remove the unneeded parts.
         try:
             if url is None:
                 url = f'https://www.basketball-reference.com/boxscores/{game_code}.html'
@@ -144,7 +143,6 @@ class Scraper:
             print("Error occurred!")
             print(e)
         else:
-            # TODO: Line Score and Four Factors Headers + Tables
             comments = soup.find_all(string=lambda text: isinstance(text, Comment))
             ls = -1  # index for line_score comment
             ff = -1  # index for four_factors comment
@@ -181,7 +179,7 @@ class Scraper:
 
             # Changed adv headers to be statically set here, rather than dynamically scraped because Play-In Game's don't
             # track BPM.
-            # TODO: Add dynamic handling for Play-In Games (no BPM).
+            # TODO: (#8) Add dynamic handling for Play-In Games when scraping matches
 
             # if len(ls_headers) > 6:  # checking if there was OT need to make dynamic (e.g. 2OT, 3OT)
             #     i = len(ls_headers) - 6
@@ -208,10 +206,9 @@ class Scraper:
                 home_adv_table = soup.find_all('table')[15].find_all('tr')
 
             # Scrape the values in each row for the visitor team in both Basic and Advanced Box Scores.
-            # TODO parse_row_data() is too simple/standard for this table at the moment.
             v_rows_basic, v_rows_adv = self.__parse_box_scores(visitor_basic_table, visitor_adv_table)
 
-            # TODO: Fix spaghetti code that handles no BPM in play-in games.
+            # TODO: (#8) Add dynamic handling for Play-In Games when scraping matches
             if len(v_rows_adv[0]) < 15:
                 for row in v_rows_adv:
                     row.append(None)
@@ -223,7 +220,7 @@ class Scraper:
             # Scrape the values in each row for the home team in both Basic and Advanced Box Scores.
             h_rows_basic, h_rows_adv = self.__parse_box_scores(home_basic_table, home_adv_table)
 
-            # TODO: Fix spaghetti code that handles no BPM in play-in games.
+            # TODO: (#8) Add dynamic handling for Play-In Games when scraping matches
             if len(h_rows_adv[0]) < 15:
                 for row in h_rows_adv:
                     row.append(None)
@@ -276,7 +273,6 @@ class Scraper:
                 print("This guy isn't important enough to scrape.")
                 return None
 
-            # TODO filtering table in line above, then 'tr' then 'th' may be a better way to get table headers
             # for other functions.
             pgstats_headers = [th.get_text() for th in pg_stats.find('tr').find_all('th')]
             # ['Season', 'Age', 'Tm', 'Lg', 'Pos', 'G', 'GS', 'MP', 'FG', 'FGA', 'FG%', '3P', '3PA', '3P%', '2P', '2PA', 
