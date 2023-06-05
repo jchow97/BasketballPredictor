@@ -12,11 +12,8 @@ class TestScraper(unittest.TestCase):
         self.arbitrary_season_year = '2000'
 
 
-    def test_scrape_nba_season_success(self):
-        pass
-        # TODO: Fix and add unit tests.
-        self.assertEqual(self.test_scraper.scrape_nba_season(self.arbitrary_season_year,
-                                                             'resources/2021-22_nba_schedule.html'), pd.DataFrame([0]))
+    def test_scrape_nba_match(self):
+        self.test_scraper.scrape_nba_match('202110200CHO', 'https://www.basketball-reference.com/boxscores/202110200CHO.html')
 
 
 if __name__ == "__main__":

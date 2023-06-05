@@ -5,6 +5,7 @@ import requests
 import datetime
 from src.common.constants import TEAM_ABBRV, MONTHS_ABBRV, MONTHS
 import time
+import re
 
 """
 The scraper should be responsible for generating data frames to form the database. Adding entities to the database 
@@ -56,11 +57,10 @@ class Scraper:
     Scrapes one NBA Season Schedule and returns a collection of schedules.
 
     @param season - NBA Season to scrape. Note: the 2021-2022 season would be season 2022
-    @param url - URL for specific season. Default is None. If specified, overrides specified season.
     @return pandas DataFrame of the season schedule.
     """
 
-    def scrape_nba_season(self, season, url=None) -> pd.DataFrame or None:
+    def scrape_nba_season(self, season) -> pd.DataFrame or None:
         print(f"Beginning scrape for {season} season.")
         # TODO: add handling for july, aug, sept
         months = ["october", "november", "december", "january", "february", "march", "april", "may", "june"]
@@ -71,9 +71,7 @@ class Scraper:
         for month in months:
             # Open URL, request the html, and create BeautifulSoup object
             try:
-                if url is None:
-                    url = f"https://www.basketball-reference.com/leagues/NBA_{season}_games-{month}.html"
-
+                url = f"https://www.basketball-reference.com/leagues/NBA_{season}_games-{month}.html"
                 time.sleep(self.__timeoutSeconds)
                 html = requests.get(url, headers={'User-Agent': self.__USER_AGENT})
                 self.__accessCounter += 1
@@ -304,6 +302,8 @@ class Scraper:
         ln_length = min(len(player_name[1]), 5)
         for i in range(ln_length):
             player_code_base = player_code_base + player_name[1][i]
+
+        player_name[0] = re.sub('[^a-zA-Z]', '', player_name[0])
 
         fn_length = min(len(player_name[0]), 2)
         for i in range(fn_length):
