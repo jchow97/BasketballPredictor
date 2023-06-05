@@ -157,33 +157,33 @@ class PlayerStats(Base):
     player_id = Column(Integer, ForeignKey("player.id"))
     type = Column(Integer, ForeignKey("player_stats_type.id"))  # 0: season 1: career
     season = Column(String)
-    age = Column(Integer)
+    age = Column(Integer, default=None)
 
-    games_played = Column(Integer)
-    games_started = Column(Integer)
-    minutes_played = Column(String(6))
-    field_goals = Column(DECIMAL)
-    field_goal_attempts = Column(DECIMAL)
-    field_goal_pct = Column(DECIMAL)
-    three_pointers = Column(DECIMAL)
-    three_point_attempts = Column(DECIMAL)
-    three_point_pct = Column(DECIMAL)
-    two_pointers = Column(DECIMAL)
-    two_point_attempts = Column(DECIMAL)
-    two_point_pct = Column(DECIMAL)
-    effective_field_goal_pct = Column(DECIMAL)
-    free_throws = Column(DECIMAL)
-    free_throw_attempts = Column(DECIMAL)
-    free_throw_pct = Column(DECIMAL)
-    offensive_rebounds = Column(DECIMAL)
-    defensive_rebounds = Column(DECIMAL)
-    total_rebounds = Column(DECIMAL)
-    assists = Column(DECIMAL)
-    steals = Column(DECIMAL)
-    blocks = Column(DECIMAL)
-    turnovers = Column(DECIMAL)
-    personal_fouls = Column(DECIMAL)
-    points = Column(DECIMAL)
+    games_played = Column(Integer, default=None)
+    games_started = Column(Integer, default=None)
+    minutes_played = Column(String, default=None)
+    field_goals = Column(DECIMAL, default=None)
+    field_goal_attempts = Column(DECIMAL, default=None)
+    field_goal_pct = Column(DECIMAL, default=None)
+    three_pointers = Column(DECIMAL, default=None)
+    three_point_attempts = Column(DECIMAL, default=None)
+    three_point_pct = Column(DECIMAL, default=None)
+    two_pointers = Column(DECIMAL, default=None)
+    two_point_attempts = Column(DECIMAL, default=None)
+    two_point_pct = Column(DECIMAL, default=None)
+    effective_field_goal_pct = Column(DECIMAL, default=None)
+    free_throws = Column(DECIMAL, default=None)
+    free_throw_attempts = Column(DECIMAL, default=None)
+    free_throw_pct = Column(DECIMAL, default=None)
+    offensive_rebounds = Column(DECIMAL, default=None)
+    defensive_rebounds = Column(DECIMAL, default=None)
+    total_rebounds = Column(DECIMAL, default=None)
+    assists = Column(DECIMAL, default=None)
+    steals = Column(DECIMAL, default=None)
+    blocks = Column(DECIMAL, default=None)
+    turnovers = Column(DECIMAL, default=None)
+    personal_fouls = Column(DECIMAL, default=None)
+    points = Column(DECIMAL, default=None)
 
 
 class PlayerStatsType(Base):
@@ -682,71 +682,65 @@ def initialize_database(year, database='mock_nba_database'):
         player_stats_df = s.scrape_nba_player(player.unique_code)
 
         for i in player_stats_df.index[:-1]:
-            player_stats = PlayerStats(
-                player_id=player.id,
-                type=1,  # for Regular Season
-                season=player_stats_df['Season'][i],
-                games_played=player_stats_df['G'][i],
-                games_started=player_stats_df['GS'][i],
-                minutes_played=player_stats_df['MP'][i],
-                field_goals=player_stats_df['FG'][i],
-                field_goal_attempts=player_stats_df['FGA'][i],
-                field_goal_pct=player_stats_df['FG%'][i],
-                three_pointers=player_stats_df['3P'][i],
-                three_point_attempts=player_stats_df['3PA'][i],
-                three_point_pct=player_stats_df['3P%'][i],
-                two_pointers=player_stats_df['2P'][i],
-                two_point_attempts=player_stats_df['2PA'][i],
-                two_point_pct=player_stats_df['2P%'][i],
-                effective_field_goal_pct=player_stats_df['eFG%'][i],
-                free_throws=player_stats_df['FT'][i],
-                free_throw_attempts=player_stats_df['FTA'][i],
-                free_throw_pct=player_stats_df['FT%'][i],
-                offensive_rebounds=player_stats_df['ORB'][i],
-                defensive_rebounds=player_stats_df['DRB'][i],
-                total_rebounds=player_stats_df['TRB'][i],
-                assists=player_stats_df['AST'][i],
-                steals=player_stats_df['STL'][i],
-                blocks=player_stats_df['BLK'][i],
-                turnovers=player_stats_df['TOV'][i],
-                personal_fouls=player_stats_df['PF'][i],
-                points=player_stats_df['PTS'][i]
-            )
-
-            session.add(player_stats)
-
-        player_stats_regular_season_totals = player_stats_df.iloc[-1]
-        player_stats_reg_career = PlayerStats(
-            player_id=player.id,
-            type=2,  # for Regular Season Career
-            season=player_stats_regular_season_totals['Season'],
-            games_played=player_stats_regular_season_totals['G'],
-            games_started=player_stats_regular_season_totals['GS'],
-            minutes_played=player_stats_regular_season_totals['MP'],
-            field_goals=player_stats_regular_season_totals['FG'],
-            field_goal_attempts=player_stats_regular_season_totals['FGA'],
-            field_goal_pct=player_stats_regular_season_totals['FG%'],
-            three_pointers=player_stats_regular_season_totals['3P'],
-            three_point_attempts=player_stats_regular_season_totals['3PA'],
-            three_point_pct=player_stats_regular_season_totals['3P%'],
-            two_pointers=player_stats_regular_season_totals['2P'],
-            two_point_attempts=player_stats_regular_season_totals['2PA'],
-            two_point_pct=player_stats_regular_season_totals['2P%'],
-            effective_field_goal_pct=player_stats_regular_season_totals['eFG%'],
-            free_throws=player_stats_regular_season_totals['FT'],
-            free_throw_attempts=player_stats_regular_season_totals['FTA'],
-            free_throw_pct=player_stats_regular_season_totals['FT%'],
-            offensive_rebounds=player_stats_regular_season_totals['ORB'],
-            defensive_rebounds=player_stats_regular_season_totals['DRB'],
-            total_rebounds=player_stats_regular_season_totals['TRB'],
-            assists=player_stats_regular_season_totals['AST'],
-            steals=player_stats_regular_season_totals['STL'],
-            blocks=player_stats_regular_season_totals['BLK'],
-            turnovers=player_stats_regular_season_totals['TOV'],
-            personal_fouls=player_stats_regular_season_totals['PF'],
-            points=player_stats_regular_season_totals['PTS']
-        )
-        session.add(player_stats_reg_career)
+            if player_stats_df['Season'][i] != '':
+                player_stats = PlayerStats(
+                    player_id=player.id,
+                    type=2 if player_stats_df['Season'][i] == 'Career' else 1,  # for Regular Season
+                    season=player_stats_df['Season'][i] if (player_stats_df['Season'][i] != 'DNP')
+                                                           and (player_stats_df['Season'][i] != '') else None,
+                    games_played=player_stats_df['G'][i] if (player_stats_df['G'][i] != 'DNP')
+                                                            and (player_stats_df['G'][i] != '') else None,
+                    games_started=player_stats_df['GS'][i] if (player_stats_df['GS'][i] != 'DNP')
+                                                               and (player_stats_df['GS'][i] != '') else None,
+                    minutes_played=player_stats_df['MP'][i] if (player_stats_df['MP'][i] != 'DNP')
+                                                                and (player_stats_df['MP'][i] != '') else None,
+                    field_goals=player_stats_df['FG'][i] if (player_stats_df['FG'][i] != 'DNP')
+                                                             and (player_stats_df['FG'][i] != '') else None,
+                    field_goal_attempts=player_stats_df['FGA'][i] if (player_stats_df['FGA'][i] != 'DNP')
+                                                                      and (player_stats_df['FGA'][i] != '') else None,
+                    field_goal_pct=player_stats_df['FG%'][i] if (player_stats_df['FG%'][i] != 'DNP')
+                                                                 and (player_stats_df['FG%'][i] != '') else None,
+                    three_pointers=player_stats_df['3P'][i] if (player_stats_df['3P'][i] != 'DNP')
+                                                                and (player_stats_df['3P'][i] != '') else None,
+                    three_point_attempts=player_stats_df['3PA'][i] if (player_stats_df['3PA'][i] != 'DNP')
+                                                                       and (player_stats_df['3PA'][i] != '') else None,
+                    three_point_pct=player_stats_df['3P%'][i] if (player_stats_df['3P%'][i] != 'DNP')
+                                                                  and (player_stats_df['3P%'][i] != '') else None,
+                    two_pointers=player_stats_df['2P'][i] if (player_stats_df['2P'][i] != 'DNP')
+                                                              and (player_stats_df['2P'][i] != '') else None,
+                    two_point_attempts=player_stats_df['2PA'][i] if (player_stats_df['2PA'][i] != 'DNP')
+                                                                     and (player_stats_df['2PA'][i] != '') else None,
+                    two_point_pct=player_stats_df['2P%'][i] if (player_stats_df['2P%'][i] != 'DNP')
+                                                                and (player_stats_df['2P%'][i] != '') else None,
+                    effective_field_goal_pct=player_stats_df['eFG%'][i] if (player_stats_df['eFG%'][i] != 'DNP')
+                                                                            and (player_stats_df['eFG%'][
+                                                                                i] != '') else None,
+                    free_throws=player_stats_df['FT'][i] if (player_stats_df['FT'][i] != 'DNP')
+                                                             and (player_stats_df['FT'][i] != '') else None,
+                    free_throw_attempts=player_stats_df['FTA'][i] if (player_stats_df['FTA'][i] != 'DNP')
+                                                                      and (player_stats_df['FTA'][i] != '') else None,
+                    free_throw_pct=player_stats_df['FT%'][i] if (player_stats_df['FT%'][i] != 'DNP')
+                                                                 and (player_stats_df['FT%'][i] != '') else None,
+                    offensive_rebounds=player_stats_df['ORB'][i] if (player_stats_df['ORB'][i] != 'DNP')
+                                                                     and (player_stats_df['ORB'][i] != '') else None,
+                    defensive_rebounds=player_stats_df['DRB'][i] if (player_stats_df['DRB'][i] != 'DNP')
+                                                                     and (player_stats_df['DRB'][i] != '') else None,
+                    total_rebounds=player_stats_df['TRB'][i] if (player_stats_df['TRB'][i] != 'DNP')
+                                                                 and (player_stats_df['TRB'][i] != '') else None,
+                    assists=player_stats_df['AST'][i] if (player_stats_df['AST'][i] != 'DNP')
+                                                          and (player_stats_df['AST'][i] != '') else None,
+                    steals=player_stats_df['STL'][i] if (player_stats_df['STL'][i] != 'DNP')
+                                                         and (player_stats_df['STL'][i] != '') else None,
+                    blocks=player_stats_df['BLK'][i] if (player_stats_df['BLK'][i] != 'DNP')
+                                                         and (player_stats_df['BLK'][i] != '') else None,
+                    turnovers=player_stats_df['TOV'][i] if (player_stats_df['TOV'][i] != 'DNP')
+                                                            and (player_stats_df['TOV'][i] != '') else None,
+                    personal_fouls=player_stats_df['PF'][i] if (player_stats_df['PF'][i] != 'DNP')
+                                                                and (player_stats_df['PF'][i] != '') else None,
+                    points=player_stats_df['PTS'][i] if (player_stats_df['PTS'][i] != 'DNP')
+                                                         and (player_stats_df['PTS'][i] != '') else None
+                )
+                session.add(player_stats)
         session.commit()
 
 

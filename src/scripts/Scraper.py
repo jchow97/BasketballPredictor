@@ -64,7 +64,9 @@ class Scraper:
     def scrape_nba_season(self, season) -> pd.DataFrame or None:
         print(f"Beginning scrape for {season} season.")
         # TODO: add handling for july, aug, sept
-        months = ["october", "november", "december", "january", "february", "march", "april", "may", "june"]
+        # TODO: revert temporary changes.
+        # months = ["october", "november", "december", "january", "february", "march", "april", "may", "june"]
+        months = ["june"]
 
         # List of DataFrame, each df represents one month in the calendar
         schedule = []
@@ -279,8 +281,6 @@ class Scraper:
             pgstats_headers = [th.get_text() for th in pg_stats.find('tr').find_all('th')]
             # ['Season', 'Age', 'Tm', 'Lg', 'Pos', 'G', 'GS', 'MP', 'FG', 'FGA', 'FG%', '3P', '3PA', '3P%', '2P', '2PA', 
             # '2P%', 'eFG%', 'FT', 'FTA', 'FT%', 'ORB','DRB', 'TRB', 'AST', 'STL', 'BLK', 'TOV', 'PF', 'PTS']
-
-            pgstats_headers = self.format_headers(pgstats_headers)
 
             pgstats_table = pg_stats.find_all('tr')[1:]
             pgstats_rows = []
