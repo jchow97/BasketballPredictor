@@ -331,8 +331,7 @@ def initialize_database() -> None:
     :return: None
     """
 
-    # TODO: (#2) Figure out how to use drop tables and create tables in code below through SQLAlchemy,
-    #  instead of dropping the entire database.
+    # TODO: (#2) Database persistence does not exist
     conn = psycopg2.connect(f"dbname=nba_master user={username}")
     conn.autocommit = True
     cur = conn.cursor()
