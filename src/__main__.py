@@ -11,7 +11,7 @@ def main():
     scraper = Scraper()
 
     initialize_database()
-    populate_tables(2022, session, scraper)
+    populate_tables(session, scraper, 2022)
 
 
 if __name__ == "__main__":

@@ -1,8 +1,6 @@
 from datetime import datetime
-
 import pandas as pd
-import sqlalchemy.orm
-from sqlalchemy import Column, Integer, String, DateTime, DECIMAL, create_engine, select
+from sqlalchemy import Column, Integer, String, DateTime, DECIMAL, create_engine
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import ForeignKey
@@ -11,6 +9,8 @@ from common.constants import CURRENT_TEAMS, TEAM_ABBRV
 import psycopg2
 
 Base = declarative_base()
+username = 'jeffreychow'
+port = ''
 database = 'mock_nba_database'
 
 
@@ -325,49 +325,59 @@ class TeamAdvancedStats(Base):
     attendance = Column(String)
 
 
-"""
-Create the database and create the tables based on the mapped classes.
-"""
+def initialize_database() -> None:
+    """
+    Create the database and create the tables based on the mapped classes.
+    :return: None
+    """
 
-
-def initialize_database():
     # TODO: (#2) Figure out how to use drop tables and create tables in code below through SQLAlchemy,
     #  instead of dropping the entire database.
-    conn = psycopg2.connect("dbname=nba_master user=jeffreychow")
+    conn = psycopg2.connect(f"dbname=nba_master user={username}")
     conn.autocommit = True
     cur = conn.cursor()
     cur.execute(f'DROP DATABASE IF EXISTS {database};')
     cur.execute(f'CREATE DATABASE {database};')
     conn.close()
 
-    engine = create_engine(f'postgresql+psycopg2://jeffreychow:@localhost:5432/{database}')
+    engine = create_engine(f'postgresql+psycopg2://{username}:@localhost:{port}/{database}')
 
     # Create tables.
     Base.metadata.create_all(engine)
 
-"""
-Populate empty database tables using the scraper.
 
-@param year - Specifies what season's data we are inserting into the database tables.
-"""
+def populate_tables(session: Session, scraper: Scraper, year: int) -> None:
+    """
+    Populate empty database tables using the scraper.
+    :param session: SQLAlchemy Session
+    :param scraper: Scraper object
+    :param year: Specifies the year (season) to scrape.
+    :return: None
+    """
+
+    add_types(session)
+    season, schedule_df = add_season(session, scraper, year)
+    add_teams(session, season.id)
+
+    for i in schedule_df.index:
+        home_team = schedule_df['Home/Neutral'][i]
+        away_team = schedule_df['Visitor/Neutral'][i]
+        game = add_game(session, scraper, schedule_df, i, season)
+        add_game_teams(session, scraper, game, home_team, away_team)
+    session.commit()
+
+    for player in session.query(Player).all():
+        add_player_stats(session, scraper, player)
+    session.commit()
 
 
-def populate_tables(year: int, session: Session, scraper: Scraper):
-    populate_type_tables(session)
-    populate_season_table(session, scraper, year)
-    populate_player_stats(session, scraper)
+def add_types(session: Session) -> None:
+    """
+    Populate the four type tables (game_type, player_stats_type, team_home_away_type, team_stats_type) with known types.
+    :param session: SQLAlchemy Session
+    :return: None
+    """
 
-
-"""
-Populate the type tables with known types.
-Type tables: game_type, player_stats_type, team_home_away_type, team_stats_type
-
-@param session - SQLAlchemy session.
-@return None
-"""
-
-
-def populate_type_tables(session: Session) -> None:
     # Add Game Types
     # TODO: (#6) Differentiate between playoff games by their rounds in `game_type` table.
     game_types = ["Preseason", "Regular Season", "Play-In Game", "Playoffs"]
@@ -398,16 +408,16 @@ def populate_type_tables(session: Session) -> None:
         session.commit()
 
 
-"""
-Populate the team tables with the current teams for the season and initialize their related tables.
-Team tables: team, team_stats, team_advanced_stats
+def add_teams(session: Session, season_id) -> None:
+    """
+    Populate the team tables with the current season's teams initialize their related tables
+    (team_stats, team_advanced_stats).
+    Team tables: team, team_stats, team_advanced_stats
+    :param session: SQLAlchemy Session
+    :param season_id:
+    :return: None
+    """
 
-@param session - SQLAlchemy session.
-@return None
-"""
-
-
-def populate_team_tables(session: Session, season_id) -> None:
     for team in CURRENT_TEAMS:
         season = session.query(Season.year).where(Season.id == season_id).one()[0]
         prev_year = str(int(season) - 1)
@@ -494,11 +504,14 @@ def populate_team_tables(session: Session, season_id) -> None:
         session.add(tas)
 
 
-"""
-"""
-
-
-def populate_season_table(session: Session, scraper: Scraper, year: int):
+def add_season(session: Session, scraper: Scraper, year: int):
+    """
+    Adds season to the season db table.
+    :param session: SQLAlchemy Session
+    :param scraper: Scraper object
+    :param year: Season to be added.
+    :return: season, schedule_df - Season object and the schedule dataframe.
+    """
     schedule_df = scraper.scrape_nba_season(year)
 
     season_start_date = scraper.to_postgres_date(schedule_df['Date'].iloc[0])
@@ -513,104 +526,93 @@ def populate_season_table(session: Session, scraper: Scraper, year: int):
 
     session.add(season)
     session.flush()
-
-    populate_team_tables(session, season.id)
-    populate_game_table(session, scraper, schedule_df, season)
+    return season, schedule_df
 
 
-"""
-"""
-
-
-def populate_game_table(session: Session, scraper: Scraper, schedule: pd.DataFrame, season: Season):
-    for i in schedule.index:
-        home_team = schedule['Home/Neutral'][i]
-        away_team = schedule['Visitor/Neutral'][i]
-        game = add_game(session, scraper, schedule, i, season)
-        populate_game_team_table(session, scraper, game, home_team, away_team)
-
-    session.commit()
-
-
-"""
-Populate PlayerStats table.
-"""
-
-
-def populate_player_stats(session: Session, scraper: Scraper):
+def add_player_stats(session: Session, scraper: Scraper, player: Player) -> None:
+    """
+    Populate the player_stats database table.
+    :param session: SQLAlchemy Session
+    :param scraper: Scraper object
+    :param player: Related Player object.
+    :return: None
+    """
 
     # TODO: (#5) Add advanced analytics tables from player page to PlayerStats
-    for player in session.query(Player).all():
-        player_stats_df = scraper.scrape_nba_player(player.unique_code)
+    player_stats_df = scraper.scrape_nba_player(player.unique_code)
 
-        for i in player_stats_df.index[:-1]:
-            if player_stats_df['Season'][i] != '':
-                player_stats = PlayerStats(
-                    player_id=player.id,
-                    type=2 if player_stats_df['Season'][i] == 'Career' else 1,  # for Regular Season
-                    season=player_stats_df['Season'][i] if (player_stats_df['Season'][i] != 'DNP')
-                                                           and (player_stats_df['Season'][i] != '') else None,
-                    games_played=player_stats_df['G'][i] if (player_stats_df['G'][i] != 'DNP')
-                                                            and (player_stats_df['G'][i] != '') else None,
-                    games_started=player_stats_df['GS'][i] if (player_stats_df['GS'][i] != 'DNP')
-                                                              and (player_stats_df['GS'][i] != '') else None,
-                    minutes_played=player_stats_df['MP'][i] if (player_stats_df['MP'][i] != 'DNP')
-                                                               and (player_stats_df['MP'][i] != '') else None,
-                    field_goals=player_stats_df['FG'][i] if (player_stats_df['FG'][i] != 'DNP')
-                                                            and (player_stats_df['FG'][i] != '') else None,
-                    field_goal_attempts=player_stats_df['FGA'][i] if (player_stats_df['FGA'][i] != 'DNP')
-                                                                     and (player_stats_df['FGA'][i] != '') else None,
-                    field_goal_pct=player_stats_df['FG%'][i] if (player_stats_df['FG%'][i] != 'DNP')
-                                                                and (player_stats_df['FG%'][i] != '') else None,
-                    three_pointers=player_stats_df['3P'][i] if (player_stats_df['3P'][i] != 'DNP')
-                                                               and (player_stats_df['3P'][i] != '') else None,
-                    three_point_attempts=player_stats_df['3PA'][i] if (player_stats_df['3PA'][i] != 'DNP')
-                                                                      and (player_stats_df['3PA'][i] != '') else None,
-                    three_point_pct=player_stats_df['3P%'][i] if (player_stats_df['3P%'][i] != 'DNP')
-                                                                 and (player_stats_df['3P%'][i] != '') else None,
-                    two_pointers=player_stats_df['2P'][i] if (player_stats_df['2P'][i] != 'DNP')
-                                                             and (player_stats_df['2P'][i] != '') else None,
-                    two_point_attempts=player_stats_df['2PA'][i] if (player_stats_df['2PA'][i] != 'DNP')
-                                                                    and (player_stats_df['2PA'][i] != '') else None,
-                    two_point_pct=player_stats_df['2P%'][i] if (player_stats_df['2P%'][i] != 'DNP')
-                                                               and (player_stats_df['2P%'][i] != '') else None,
-                    effective_field_goal_pct=player_stats_df['eFG%'][i] if (player_stats_df['eFG%'][i] != 'DNP')
-                                                                           and (player_stats_df['eFG%'][
-                                                                                    i] != '') else None,
-                    free_throws=player_stats_df['FT'][i] if (player_stats_df['FT'][i] != 'DNP')
-                                                            and (player_stats_df['FT'][i] != '') else None,
-                    free_throw_attempts=player_stats_df['FTA'][i] if (player_stats_df['FTA'][i] != 'DNP')
-                                                                     and (player_stats_df['FTA'][i] != '') else None,
-                    free_throw_pct=player_stats_df['FT%'][i] if (player_stats_df['FT%'][i] != 'DNP')
-                                                                and (player_stats_df['FT%'][i] != '') else None,
-                    offensive_rebounds=player_stats_df['ORB'][i] if (player_stats_df['ORB'][i] != 'DNP')
-                                                                    and (player_stats_df['ORB'][i] != '') else None,
-                    defensive_rebounds=player_stats_df['DRB'][i] if (player_stats_df['DRB'][i] != 'DNP')
-                                                                    and (player_stats_df['DRB'][i] != '') else None,
-                    total_rebounds=player_stats_df['TRB'][i] if (player_stats_df['TRB'][i] != 'DNP')
-                                                                and (player_stats_df['TRB'][i] != '') else None,
-                    assists=player_stats_df['AST'][i] if (player_stats_df['AST'][i] != 'DNP')
-                                                         and (player_stats_df['AST'][i] != '') else None,
-                    steals=player_stats_df['STL'][i] if (player_stats_df['STL'][i] != 'DNP')
-                                                        and (player_stats_df['STL'][i] != '') else None,
-                    blocks=player_stats_df['BLK'][i] if (player_stats_df['BLK'][i] != 'DNP')
-                                                        and (player_stats_df['BLK'][i] != '') else None,
-                    turnovers=player_stats_df['TOV'][i] if (player_stats_df['TOV'][i] != 'DNP')
-                                                           and (player_stats_df['TOV'][i] != '') else None,
-                    personal_fouls=player_stats_df['PF'][i] if (player_stats_df['PF'][i] != 'DNP')
-                                                               and (player_stats_df['PF'][i] != '') else None,
-                    points=player_stats_df['PTS'][i] if (player_stats_df['PTS'][i] != 'DNP')
-                                                        and (player_stats_df['PTS'][i] != '') else None
-                )
-                session.add(player_stats)
-        session.commit()
-
-"""
-Add data to game_team database table.
-"""
+    for i in player_stats_df.index[:-1]:
+        if player_stats_df['Season'][i] != '':
+            player_stats = PlayerStats(
+                player_id=player.id,
+                type=2 if player_stats_df['Season'][i] == 'Career' else 1,  # for Regular Season
+                season=player_stats_df['Season'][i] if (player_stats_df['Season'][i] != 'DNP')
+                                                       and (player_stats_df['Season'][i] != '') else None,
+                games_played=player_stats_df['G'][i] if (player_stats_df['G'][i] != 'DNP')
+                                                        and (player_stats_df['G'][i] != '') else None,
+                games_started=player_stats_df['GS'][i] if (player_stats_df['GS'][i] != 'DNP')
+                                                          and (player_stats_df['GS'][i] != '') else None,
+                minutes_played=player_stats_df['MP'][i] if (player_stats_df['MP'][i] != 'DNP')
+                                                           and (player_stats_df['MP'][i] != '') else None,
+                field_goals=player_stats_df['FG'][i] if (player_stats_df['FG'][i] != 'DNP')
+                                                        and (player_stats_df['FG'][i] != '') else None,
+                field_goal_attempts=player_stats_df['FGA'][i] if (player_stats_df['FGA'][i] != 'DNP')
+                                                                 and (player_stats_df['FGA'][i] != '') else None,
+                field_goal_pct=player_stats_df['FG%'][i] if (player_stats_df['FG%'][i] != 'DNP')
+                                                            and (player_stats_df['FG%'][i] != '') else None,
+                three_pointers=player_stats_df['3P'][i] if (player_stats_df['3P'][i] != 'DNP')
+                                                           and (player_stats_df['3P'][i] != '') else None,
+                three_point_attempts=player_stats_df['3PA'][i] if (player_stats_df['3PA'][i] != 'DNP')
+                                                                  and (player_stats_df['3PA'][i] != '') else None,
+                three_point_pct=player_stats_df['3P%'][i] if (player_stats_df['3P%'][i] != 'DNP')
+                                                             and (player_stats_df['3P%'][i] != '') else None,
+                two_pointers=player_stats_df['2P'][i] if (player_stats_df['2P'][i] != 'DNP')
+                                                         and (player_stats_df['2P'][i] != '') else None,
+                two_point_attempts=player_stats_df['2PA'][i] if (player_stats_df['2PA'][i] != 'DNP')
+                                                                and (player_stats_df['2PA'][i] != '') else None,
+                two_point_pct=player_stats_df['2P%'][i] if (player_stats_df['2P%'][i] != 'DNP')
+                                                           and (player_stats_df['2P%'][i] != '') else None,
+                effective_field_goal_pct=player_stats_df['eFG%'][i] if (player_stats_df['eFG%'][i] != 'DNP')
+                                                                       and (player_stats_df['eFG%'][
+                                                                                i] != '') else None,
+                free_throws=player_stats_df['FT'][i] if (player_stats_df['FT'][i] != 'DNP')
+                                                        and (player_stats_df['FT'][i] != '') else None,
+                free_throw_attempts=player_stats_df['FTA'][i] if (player_stats_df['FTA'][i] != 'DNP')
+                                                                 and (player_stats_df['FTA'][i] != '') else None,
+                free_throw_pct=player_stats_df['FT%'][i] if (player_stats_df['FT%'][i] != 'DNP')
+                                                            and (player_stats_df['FT%'][i] != '') else None,
+                offensive_rebounds=player_stats_df['ORB'][i] if (player_stats_df['ORB'][i] != 'DNP')
+                                                                and (player_stats_df['ORB'][i] != '') else None,
+                defensive_rebounds=player_stats_df['DRB'][i] if (player_stats_df['DRB'][i] != 'DNP')
+                                                                and (player_stats_df['DRB'][i] != '') else None,
+                total_rebounds=player_stats_df['TRB'][i] if (player_stats_df['TRB'][i] != 'DNP')
+                                                            and (player_stats_df['TRB'][i] != '') else None,
+                assists=player_stats_df['AST'][i] if (player_stats_df['AST'][i] != 'DNP')
+                                                     and (player_stats_df['AST'][i] != '') else None,
+                steals=player_stats_df['STL'][i] if (player_stats_df['STL'][i] != 'DNP')
+                                                    and (player_stats_df['STL'][i] != '') else None,
+                blocks=player_stats_df['BLK'][i] if (player_stats_df['BLK'][i] != 'DNP')
+                                                    and (player_stats_df['BLK'][i] != '') else None,
+                turnovers=player_stats_df['TOV'][i] if (player_stats_df['TOV'][i] != 'DNP')
+                                                       and (player_stats_df['TOV'][i] != '') else None,
+                personal_fouls=player_stats_df['PF'][i] if (player_stats_df['PF'][i] != 'DNP')
+                                                           and (player_stats_df['PF'][i] != '') else None,
+                points=player_stats_df['PTS'][i] if (player_stats_df['PTS'][i] != 'DNP')
+                                                    and (player_stats_df['PTS'][i] != '') else None
+            )
+            session.add(player_stats)
 
 
-def populate_game_team_table(session: Session, scraper: Scraper, game: Game, home_team: str, away_team: str):
+def add_game_teams(session: Session, scraper: Scraper, game: Game, home_team: str, away_team: str) -> None:
+    """
+    Adds the away and home team's game data to game_team database table.
+    :param session: SQLAlchemy Session
+    :param scraper: Scraper Object
+    :param game: Related game
+    :param home_team: Home team of the game.
+    :param away_team: Away team of the game
+    :return: None
+    """
     game_summary, home_box, away_box = scraper.scrape_nba_match(game.game_code)
     # Game Summary headers: Team | 1 | 2 | 3 | 4 | (OT) | T | Pace | eFG% | TOV% | ORB% | FT/FGA | ORtg
 
@@ -628,7 +630,7 @@ def populate_game_team_table(session: Session, scraper: Scraper, game: Game, hom
     session.add(game_home_team)
     session.flush()
 
-    populate_game_team_log_table(session, game_home_team, home_team_game_summary, home_box_team_stats)
+    add_game_team_log(session, game_home_team, home_team_game_summary, home_box_team_stats)
 
     for i in home_box.index[:-1]:
         player_name = home_box['Players'][i]
@@ -650,6 +652,8 @@ def populate_game_team_table(session: Session, scraper: Scraper, game: Game, hom
     session.add(game_away_team)
     session.flush()
 
+    add_game_team_log(session, game_away_team, away_team_game_summary, away_box_team_stats)
+
     for i in away_box.index[:-1]:
         player_name = away_box['Players'][i]
         player_code = away_box['Player Code'][i]
@@ -663,8 +667,15 @@ def populate_game_team_table(session: Session, scraper: Scraper, game: Game, hom
         add_game_player_log(session, away_box, i, player, game_away_team)
 
 
-def populate_game_team_log_table(session: Session, game_team: GameTeam, game_summary: pd.DataFrame,
-                                 team_box_stats: pd.DataFrame):
+def add_game_team_log(session: Session, game_team: GameTeam, game_summary: pd.DataFrame, team_box_stats: pd.DataFrame):
+    """
+    Adds a team's game log to the game_team_log database table.
+    :param session: SQLAlchemy Session
+    :param game_team: Related GameTeam object
+    :param game_summary: Team's statistics dataframe.
+    :param team_box_stats: Team's box score dataframe.
+    :return:
+    """
     gtl = GameTeamLog(
         game_team_id=game_team.id,
 
@@ -718,6 +729,13 @@ def populate_game_team_log_table(session: Session, game_team: GameTeam, game_sum
 
 
 def add_player(session: Session, player_name: str, player_code: str) -> Player:
+    """
+    Add a player to the player database table.
+    :param session: SQLAlchemy Session.
+    :param player_name: Player's name.
+    :param player_code: Player's unique identifier.
+    :return: Newly created Player object.
+    """
     player = Player(
         unique_code=player_code,
         first_name=player_name.split()[0],
@@ -731,7 +749,14 @@ def add_player(session: Session, player_name: str, player_code: str) -> Player:
     return player
 
 
-def add_player_team(session: Session, player: Player, game_team):
+def add_player_team(session: Session, player: Player, game_team) -> None:
+    """
+    Add a player-team relationship to the player_team database table.
+    :param session: SQLAlchemy Session
+    :param player: Related Player object.
+    :param game_team: The player's team
+    :return: None
+    """
     player_team = PlayerTeam(
         player_id=player.id,
         team_id=game_team.team_id,
@@ -741,7 +766,16 @@ def add_player_team(session: Session, player: Player, game_team):
     session.add(player_team)
 
 
-def add_game_player_log(session: Session, box_df: pd.DataFrame, i: int, player: Player, game_team: GameTeam):
+def add_game_player_log(session: Session, box_df: pd.DataFrame, i: int, player: Player, game_team: GameTeam) -> None:
+    """
+    Add a player's game log to the game_player_log database table.
+    :param session: SQLAlchemy Session
+    :param box_df: Game's box score dataframe
+    :param i: index of the box score to look at
+    :param player: Related Player object.
+    :param game_team: Related GameTeam object.
+    :return: None
+    """
     if ("Did Not" in box_df['MP'][i]) or ("Not With" in box_df['MP'][i]):
         game_player_log = GamePlayerLog(
             player_id=player.id,
@@ -791,20 +825,17 @@ def add_game_player_log(session: Session, box_df: pd.DataFrame, i: int, player: 
         )
     session.add(game_player_log)
 
-# HELPER FUNCTIONS
-
-
-"""
-Add game to the database.
-
-@param session - SQLAlchemy Session
-@param scraper - Scraper object.
-@param schedule - Pandas Dataframe of schedule where the game is from.
-@param i - index of the schedule to look for.
-"""
-
 
 def add_game(session: Session, scraper: Scraper, schedule: pd.DataFrame, i: int, season: Season) -> Game:
+    """
+    Add a game to the game database table.
+    :param session: SQLAlchemy Session
+    :param scraper: Scraper object
+    :param schedule: Schedule dataframe.
+    :param i: Index to look at
+    :param season: Related Season object.
+    :return: Newly created Game object.
+    """
     # Create game object
     game_datetime = scraper.to_postgres_datetime(schedule['Date'][i], schedule['Start (ET)'][i])
     home_team = schedule['Home/Neutral'][i]
@@ -823,14 +854,12 @@ def add_game(session: Session, scraper: Scraper, schedule: pd.DataFrame, i: int,
     return game
 
 
-"""
-Convert a datestring to the postgres date.
-@param datetime - Python datetime object.
-@return string in PostgreSQL format.
-"""
-
-
 def to_postgres_timestamp(date_string: str) -> str:
+    """
+    Convert a date_string to the postgres date.
+    :param date_string: Python datetime object.
+    :return: string in Postgres format.
+    """
     # Convert the input string to a datetime object
     date_obj = datetime.strptime(date_string, '%a, %b %d, %Y')
 
@@ -839,4 +868,3 @@ def to_postgres_timestamp(date_string: str) -> str:
 
     return postgres_timestamp
 
-# initialize_database(2022)
