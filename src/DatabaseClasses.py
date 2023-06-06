@@ -530,7 +530,7 @@ def add_season(session: Session, scraper: Scraper, year: int):
 
 def add_player_stats(session: Session, scraper: Scraper, player: Player) -> None:
     """
-    Populate the player_stats database table.
+    Add a player's season and career statistics to the player_stats database table.
     :param session: SQLAlchemy Session
     :param scraper: Scraper object
     :param player: Related Player object.
@@ -539,6 +539,9 @@ def add_player_stats(session: Session, scraper: Scraper, player: Player) -> None
 
     # TODO: (#5) Add advanced analytics tables from player page to PlayerStats
     player_stats_df = scraper.scrape_nba_player(player.unique_code)
+
+    if player_stats_df is None:
+        return None
 
     for i in player_stats_df.index[:-1]:
         if player_stats_df['Season'][i] != '':
