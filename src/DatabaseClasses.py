@@ -359,18 +359,17 @@ def initialize_database(year, database='mock_nba_database'):
     # Query for season id.
 
     for i in schedule_df.index:
-        game_datetime = schedule_df['Date'][i]
+        game_datetime = s.to_postgres_datetime(schedule_df['Date'][i], schedule_df['Start (ET)'][i])
         home_team = schedule_df['Home/Neutral'][i]
         away_team = schedule_df['Visitor/Neutral'][i]
+        game_code = s.get_game_code(schedule_df['Date'][i], home_team)
 
         # TODO: (#3) Correct assignment of game types.
-
         game = Game(
             season_id=season.id,
-            # TODO: scrape playoff games too
             type=2,  # 2: regular season
-            start_datetime=s.to_postgres_date(game_datetime),
-            game_code=s.get_game_code(game_datetime, home_team)
+            start_datetime=game_datetime,
+            game_code=game_code
         )
         session.add(game)
         session.flush()

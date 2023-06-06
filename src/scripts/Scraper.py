@@ -2,7 +2,7 @@ from bs4 import BeautifulSoup, Comment
 from urllib.error import HTTPError
 import pandas as pd
 import requests
-import datetime
+from datetime import datetime
 from src.common.constants import TEAM_ABBRV, MONTHS_ABBRV, MONTHS
 import time
 import re
@@ -307,10 +307,25 @@ class Scraper:
 
     def to_postgres_date(self, date_string: str):
         # Parse the input string into a datetime object
-        date = datetime.datetime.strptime(date_string, '%a, %b %d, %Y')
+        date = datetime.strptime(date_string, '%a, %b %d, %Y')
 
         # Return the date in the PostgresSQL date format
         return date.strftime('%Y-%m-%d')
+
+    """
+    Converts date string from basketball-reference to PostgreSQL date format
+    @param date_string - Basketball-reference date string format.
+    @return string - formatted date string.
+    """
+
+    def to_postgres_datetime(self, date_str: str, time_str: str):
+        # Parse the input string into a datetime object
+        formatted_date = datetime.strptime(date_str, '%a, %b %d, %Y').date()
+        time_str = time_str.replace('p', 'PM')
+        time_str = time_str.replace('a', 'AM')
+        formatted_time = datetime.strptime(time_str, '%I:%M%p').time()
+
+        return datetime.combine(formatted_date, formatted_time).strftime('%Y-%m-%d %H:%M:%S')
 
     """
     Parse row data from given table.
