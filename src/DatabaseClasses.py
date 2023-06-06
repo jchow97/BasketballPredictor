@@ -1,4 +1,7 @@
 from datetime import datetime
+
+import pandas as pd
+import sqlalchemy.orm
 from sqlalchemy import Column, Integer, String, DateTime, DECIMAL, create_engine, select
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.declarative import declarative_base
@@ -322,6 +325,11 @@ class TeamAdvancedStats(Base):
     attendance = Column(String)
 
 
+"""
+Create the database and create the tables based on the mapped classes.
+"""
+
+
 def initialize_database():
     # TODO: (#2) Figure out how to use drop tables and create tables in code below through SQLAlchemy,
     #  instead of dropping the entire database.
@@ -344,402 +352,10 @@ Populate empty database tables using the scraper.
 """
 
 
-def populate_tables(year, session):
-    s = Scraper()
-
-    schedule_df = s.scrape_nba_season(year)
-
-    season_start_date = s.to_postgres_date(schedule_df['Date'].iloc[0])
-    season_end_date = get_season_end_date(schedule_df)
-
-    season = Season(
-        year=f"{year}",
-        friendly_name=f"NBA Season {year - 1}-{year}",
-        season_start=season_start_date,
-        season_end=season_end_date
-    )
-
-    session.add(season)
-    session.flush()
-
+def populate_tables(year: int, session: Session, scraper: Scraper):
     populate_type_tables(session)
-    populate_team_tables(session, season.id)
-
-    # Query for season id.
-
-    for i in schedule_df.index:
-        game_datetime = s.to_postgres_datetime(schedule_df['Date'][i], schedule_df['Start (ET)'][i])
-        home_team = schedule_df['Home/Neutral'][i]
-        away_team = schedule_df['Visitor/Neutral'][i]
-        game_code = s.get_game_code(schedule_df['Date'][i], home_team)
-
-        # TODO: (#3) Correct assignment of game types.
-        game = Game(
-            season_id=season.id,
-            type=2,  # 2: regular season
-            start_datetime=game_datetime,
-            game_code=game_code
-        )
-        session.add(game)
-        session.flush()
-
-        game_summary, home_box, away_box = s.scrape_nba_match(game.game_code)
-        # Game Summary headers: Team | 1 | 2 | 3 | 4 | (OT) | T | Pace | eFG% | TOV% | ORB% | FT/FGA | ORtg
-
-        home_box_team_stats = home_box.iloc[-1]
-        home_team_game_summary = game_summary.iloc[1]
-        away_box_team_stats = away_box.iloc[-1]
-        away_team_game_summary = game_summary.iloc[0]
-
-        game_home_team = GameTeam(
-            game_id=game.id,
-            team_id=session.query(Team.id).filter(Team.name == home_team).scalar_subquery(),
-            team_home_away_type=1
-        )
-
-        session.add(game_home_team)
-        session.flush()
-
-        game_home_team_log = GameTeamLog(
-            game_team_id=game_home_team.id,
-
-            total_points=home_team_game_summary['T'],
-            first_quarter_points=home_team_game_summary['1'],
-            second_quarter_points=home_team_game_summary['2'],
-            third_quarter_points=home_team_game_summary['3'],
-            fourth_quarter_points=home_team_game_summary['4'],
-            overtime_points=None,  # TODO: Configure OT calculation.
-
-            minutes_played=home_box_team_stats['MP'],
-            field_goals=home_box_team_stats['FG'],
-            field_goal_attempts=home_box_team_stats['FGA'],
-            field_goal_pct=home_box_team_stats['FG%'],
-            three_pointers=home_box_team_stats['3P'],
-            three_point_attempts=home_box_team_stats['3PA'],
-            three_point_pct=home_box_team_stats['3P%'],
-            free_throws=home_box_team_stats['FT'],
-            free_throw_attempts=home_box_team_stats['FTA'],
-            free_throw_pct=home_box_team_stats['FT%'],
-            offensive_rebounds=home_box_team_stats['ORB'],
-            defensive_rebounds=home_box_team_stats['DRB'],
-            total_rebounds=home_box_team_stats['TRB'],
-            assists=home_box_team_stats['AST'],
-            steals=home_box_team_stats['STL'],
-            blocks=home_box_team_stats['BLK'],
-            turnovers=home_box_team_stats['TOV'],
-            personal_fouls=home_box_team_stats['PF'],
-            points=home_box_team_stats['PTS'],
-            plus_minus=None,
-
-            true_shooting_pct=home_box_team_stats['TS%'],
-            effective_field_goal_pct=home_box_team_stats['eFG%'],
-            three_point_attempt_rate=home_box_team_stats['3PAr'],
-            free_throw_attempt_rate=home_box_team_stats['FTr'],
-            offensive_rebound_pct=home_box_team_stats['ORB%'],
-            defensive_rebound_pct=home_box_team_stats['DRB%'],
-            total_rebound_pct=home_box_team_stats['TRB%'],
-            assist_pct=home_box_team_stats['AST%'],
-            steal_pct=home_box_team_stats['STL%'],
-            block_pct=home_box_team_stats['BLK%'],
-            turnover_pct=home_box_team_stats['TOV%'],
-            usage_pct=home_box_team_stats['USG%'],
-            offensive_rating=home_box_team_stats['ORtg'],
-            defensive_rating=home_box_team_stats['DRtg'],
-            box_plus_minus=None,
-            pace=home_team_game_summary['Pace'],
-            free_throws_per_field_goal_attempt=home_team_game_summary['FT/FGA'],
-        )
-        session.add(game_home_team_log)
-
-        for i in home_box.index[:-1]:
-            player_name = home_box['Players'][i]
-            player_code = home_box['Player Code'][i]
-            player = session.query(Player).filter(
-                Player.unique_code == player_code and Player.friendly_name == player_name).one_or_none()
-
-            if player is None:
-                player = Player(
-                    unique_code=player_code,
-                    first_name=player_name.split()[0],
-                    last_name=player_name.split()[1],
-                    friendly_name=player_name
-                )
-
-                session.add(player)
-                session.flush()
-
-                player_team = PlayerTeam(
-                    player_id=player.id,
-                    team_id=game_home_team.team_id,
-                    # TODO: Replace datetime.now to actual date.
-                    start_date=datetime.now()
-                )
-                session.add(player_team)
-
-            if ("Did Not" in home_box['MP'][i]) or ("Not With" in home_box['MP'][i]):
-                game_player_log = GamePlayerLog(
-                    player_id=player.id,
-                    game_team_id=game_home_team.id
-                )
-            else:
-                game_player_log = GamePlayerLog(
-                    player_id=player.id,
-                    game_team_id=game_home_team.id,
-
-                    minutes_played=home_box['MP'][i] if (home_box['MP'][i] != '') else None,
-                    field_goals=home_box['FG'][i] if (home_box['FG'][i] != '') else None,
-                    field_goal_attempts=home_box['FGA'][i] if (home_box['FGA'][i] != '') else None,
-                    field_goal_pct=home_box['FG%'][i] if (home_box['FG%'][i] != '') else None,
-                    three_pointers=home_box['3P'][i] if (home_box['3P'][i] != '') else None,
-                    three_point_attempts=home_box['3PA'][i] if (home_box['3PA'][i] != '') else None,
-                    three_point_pct=home_box['3P%'][i] if (home_box['3P%'][i] != '') else None,
-                    free_throws=home_box['FT'][i] if (home_box['FT'][i] != '') else None,
-                    free_throw_attempts=home_box['FTA'][i] if (home_box['FTA'][i] != '') else None,
-                    free_throw_pct=home_box['FT%'][i] if (home_box['FT%'][i] != '') else None,
-                    offensive_rebounds=home_box['ORB'][i] if (home_box['ORB'][i] != '') else None,
-                    defensive_rebounds=home_box['DRB'][i] if (home_box['DRB'][i] != '') else None,
-                    total_rebounds=home_box['TRB'][i] if (home_box['TRB'][i] != '') else None,
-                    assists=home_box['AST'][i] if (home_box['AST'][i] != '') else None,
-                    steals=home_box['STL'][i] if (home_box['STL'][i] != '') else None,
-                    blocks=home_box['BLK'][i] if (home_box['BLK'][i] != '') else None,
-                    turnovers=home_box['TOV'][i] if (home_box['TOV'][i] != '') else None,
-                    personal_fouls=home_box['PF'][i] if (home_box['PF'][i] != '') else None,
-                    points=home_box['PTS'][i] if (home_box['PTS'][i] != '') else None,
-                    plus_minus=home_box['+/-'][i] if (home_box['+/-'][i] != '') else None,
-
-                    true_shooting_pct=home_box['TS%'][i] if (home_box['TS%'][i] != '') else None,
-                    effective_field_goal_pct=home_box['eFG%'][i] if (home_box['eFG%'][i] != '') else None,
-                    three_point_attempt_rate=home_box['3PAr'][i] if (home_box['3PAr'][i] != '') else None,
-                    free_throw_attempt_rate=home_box['FTr'][i] if (home_box['FTr'][i] != '') else None,
-                    offensive_rebound_pct=home_box['ORB%'][i] if (home_box['ORB%'][i] != '') else None,
-                    defensive_rebound_pct=home_box['DRB%'][i] if (home_box['DRB%'][i] != '') else None,
-                    total_rebound_pct=home_box['TRB%'][i] if (home_box['TRB%'][i] != '') else None,
-                    assist_pct=home_box['AST%'][i] if (home_box['AST%'][i] != '') else None,
-                    steal_pct=home_box['STL%'][i] if (home_box['STL%'][i] != '') else None,
-                    block_pct=home_box['BLK%'][i] if (home_box['BLK%'][i] != '') else None,
-                    turnover_pct=home_box['TOV%'][i] if (home_box['TOV%'][i] != '') else None,
-                    usage_pct=home_box['USG%'][i] if (home_box['USG%'][i] != '') else None,
-                    offensive_rating=home_box['ORtg'][i] if (home_box['ORtg'][i] != '') else None,
-                    defensive_rating=home_box['DRtg'][i] if (home_box['DRtg'][i] != '') else None,
-                    box_plus_minus=home_box['BPM'][i] if (home_box['BPM'][i] != '') else None
-                )
-            session.add(game_player_log)
-
-        game_away_team = GameTeam(
-            game_id=game.id,
-            team_id=session.query(Team.id).filter(Team.name == away_team).scalar_subquery(),
-            team_home_away_type=2
-        )
-        session.add(game_away_team)
-        session.flush()
-
-        game_away_team_log = GameTeamLog(
-            game_team_id=game_away_team.id,
-
-            total_points=away_team_game_summary['T'],
-            first_quarter_points=away_team_game_summary['1'],
-            second_quarter_points=away_team_game_summary['2'],
-            third_quarter_points=away_team_game_summary['3'],
-            fourth_quarter_points=away_team_game_summary['4'],
-            overtime_points=None,  # TODO: Configure OT calculation.
-
-            minutes_played=away_box_team_stats['MP'],
-            field_goals=away_box_team_stats['FG'],
-            field_goal_attempts=away_box_team_stats['FGA'],
-            field_goal_pct=away_box_team_stats['FG%'],
-            three_pointers=away_box_team_stats['3P'],
-            three_point_attempts=away_box_team_stats['3PA'],
-            three_point_pct=away_box_team_stats['3P%'],
-            free_throws=away_box_team_stats['FT'],
-            free_throw_attempts=away_box_team_stats['FTA'],
-            free_throw_pct=away_box_team_stats['FT%'],
-            offensive_rebounds=away_box_team_stats['ORB'],
-            defensive_rebounds=away_box_team_stats['DRB'],
-            total_rebounds=away_box_team_stats['TRB'],
-            assists=away_box_team_stats['AST'],
-            steals=away_box_team_stats['STL'],
-            blocks=away_box_team_stats['BLK'],
-            turnovers=away_box_team_stats['TOV'],
-            personal_fouls=away_box_team_stats['PF'],
-            points=away_box_team_stats['PTS'],
-            plus_minus=None,
-
-            true_shooting_pct=away_box_team_stats['TS%'],
-            effective_field_goal_pct=away_box_team_stats['eFG%'],
-            three_point_attempt_rate=away_box_team_stats['3PAr'],
-            free_throw_attempt_rate=away_box_team_stats['FTr'],
-            offensive_rebound_pct=away_box_team_stats['ORB%'],
-            defensive_rebound_pct=away_box_team_stats['DRB%'],
-            total_rebound_pct=away_box_team_stats['TRB%'],
-            assist_pct=away_box_team_stats['AST%'],
-            steal_pct=away_box_team_stats['STL%'],
-            block_pct=away_box_team_stats['BLK%'],
-            turnover_pct=away_box_team_stats['TOV%'],
-            usage_pct=away_box_team_stats['USG%'],
-            offensive_rating=away_box_team_stats['ORtg'],
-            defensive_rating=away_box_team_stats['DRtg'],
-            box_plus_minus=None,
-            pace=away_team_game_summary['Pace'],
-            free_throws_per_field_goal_attempt=away_team_game_summary['FT/FGA'],
-        )
-        session.add(game_away_team_log)
-
-        for i in away_box.index[:-1]:
-            player_name = away_box['Players'][i]
-            player_code = away_box['Player Code'][i]
-            player = session.query(Player).filter(
-                Player.unique_code == player_code and Player.friendly_name == player_name).one_or_none()
-
-            if player is None:
-                player = Player(
-                    unique_code=player_code,
-                    first_name=player_name.split()[0],
-                    last_name=player_name.split()[1],
-                    friendly_name=player_name
-                )
-
-                session.add(player)
-                session.flush()
-
-                player_team = PlayerTeam(
-                    player_id=player.id,
-                    team_id=game_away_team.team_id,
-                    # TODO: (#13) Scrape PlayerTeam.start_date
-                    start_date=datetime.now()
-                )
-                session.add(player_team)
-
-            if ("Did Not" in away_box['MP'][i]) or ("Not In" in away_box['MP']):
-                game_player_log = GamePlayerLog(
-                    player_id=player.id,
-                    game_team_id=game_away_team.id,
-                    minutes_played=away_box['MP'][i] if (away_box['MP'][i] != '') else None
-                )
-            else:
-                game_player_log = GamePlayerLog(
-                    player_id=player.id,
-                    game_team_id=game_away_team.id,
-
-                    minutes_played=away_box['MP'][i] if (away_box['MP'][i] != '') else None,
-                    field_goals=away_box['FG'][i] if (away_box['FG'][i] != '') else None,
-                    field_goal_attempts=away_box['FGA'][i] if (away_box['FGA'][i] != '') else None,
-                    field_goal_pct=away_box['FG%'][i] if (away_box['FG%'][i] != '') else None,
-                    three_pointers=away_box['3P'][i] if (away_box['3P'][i] != '') else None,
-                    three_point_attempts=away_box['3PA'][i] if (away_box['3PA'][i] != '') else None,
-                    three_point_pct=away_box['3P%'][i] if (away_box['3P%'][i] != '') else None,
-                    free_throws=away_box['FT'][i] if (away_box['FT'][i] != '') else None,
-                    free_throw_attempts=away_box['FTA'][i] if (away_box['FTA'][i] != '') else None,
-                    free_throw_pct=away_box['FT%'][i] if (away_box['FT%'][i] != '') else None,
-                    offensive_rebounds=away_box['ORB'][i] if (away_box['ORB'][i] != '') else None,
-                    defensive_rebounds=away_box['DRB'][i] if (away_box['DRB'][i] != '') else None,
-                    total_rebounds=away_box['TRB'][i] if (away_box['TRB'][i] != '') else None,
-                    assists=away_box['AST'][i] if (away_box['AST'][i] != '') else None,
-                    steals=away_box['STL'][i] if (away_box['STL'][i] != '') else None,
-                    blocks=away_box['BLK'][i] if (away_box['BLK'][i] != '') else None,
-                    turnovers=away_box['TOV'][i] if (away_box['TOV'][i] != '') else None,
-                    personal_fouls=away_box['PF'][i] if (away_box['PF'][i] != '') else None,
-                    points=away_box['PTS'][i] if (away_box['PTS'][i] != '') else None,
-                    plus_minus=away_box['+/-'][i] if (away_box['+/-'][i] != '') else None,
-
-                    true_shooting_pct=away_box['TS%'][i] if (away_box['TS%'][i] != '') else None,
-                    effective_field_goal_pct=away_box['eFG%'][i] if (away_box['eFG%'][i] != '') else None,
-                    three_point_attempt_rate=away_box['3PAr'][i] if (away_box['3PAr'][i] != '') else None,
-                    free_throw_attempt_rate=away_box['FTr'][i] if (away_box['FTr'][i] != '') else None,
-                    offensive_rebound_pct=away_box['ORB%'][i] if (away_box['ORB%'][i] != '') else None,
-                    defensive_rebound_pct=away_box['DRB%'][i] if (away_box['DRB%'][i] != '') else None,
-                    total_rebound_pct=away_box['TRB%'][i] if (away_box['TRB%'][i] != '') else None,
-                    assist_pct=away_box['AST%'][i] if (away_box['AST%'][i] != '') else None,
-                    steal_pct=away_box['STL%'][i] if (away_box['STL%'][i] != '') else None,
-                    block_pct=away_box['BLK%'][i] if (away_box['BLK%'][i] != '') else None,
-                    turnover_pct=away_box['TOV%'][i] if (away_box['TOV%'][i] != '') else None,
-                    usage_pct=away_box['USG%'][i] if (away_box['USG%'][i] != '') else None,
-                    offensive_rating=away_box['ORtg'][i] if (away_box['ORtg'][i] != '') else None,
-                    defensive_rating=away_box['DRtg'][i] if (away_box['DRtg'][i] != '') else None,
-                    box_plus_minus=away_box['BPM'][i] if (away_box['BPM'][i] != '') else None
-                )
-            session.add(game_player_log)
-
-    session.commit()
-
-    # TODO: (#5) Add advanced analytics tables from player page to PlayerStats
-    for player in session.query(Player).all():
-        player_stats_df = s.scrape_nba_player(player.unique_code)
-
-        for i in player_stats_df.index[:-1]:
-            if player_stats_df['Season'][i] != '':
-                player_stats = PlayerStats(
-                    player_id=player.id,
-                    type=2 if player_stats_df['Season'][i] == 'Career' else 1,  # for Regular Season
-                    season=player_stats_df['Season'][i] if (player_stats_df['Season'][i] != 'DNP')
-                                                           and (player_stats_df['Season'][i] != '') else None,
-                    games_played=player_stats_df['G'][i] if (player_stats_df['G'][i] != 'DNP')
-                                                            and (player_stats_df['G'][i] != '') else None,
-                    games_started=player_stats_df['GS'][i] if (player_stats_df['GS'][i] != 'DNP')
-                                                              and (player_stats_df['GS'][i] != '') else None,
-                    minutes_played=player_stats_df['MP'][i] if (player_stats_df['MP'][i] != 'DNP')
-                                                               and (player_stats_df['MP'][i] != '') else None,
-                    field_goals=player_stats_df['FG'][i] if (player_stats_df['FG'][i] != 'DNP')
-                                                            and (player_stats_df['FG'][i] != '') else None,
-                    field_goal_attempts=player_stats_df['FGA'][i] if (player_stats_df['FGA'][i] != 'DNP')
-                                                                     and (player_stats_df['FGA'][i] != '') else None,
-                    field_goal_pct=player_stats_df['FG%'][i] if (player_stats_df['FG%'][i] != 'DNP')
-                                                                and (player_stats_df['FG%'][i] != '') else None,
-                    three_pointers=player_stats_df['3P'][i] if (player_stats_df['3P'][i] != 'DNP')
-                                                               and (player_stats_df['3P'][i] != '') else None,
-                    three_point_attempts=player_stats_df['3PA'][i] if (player_stats_df['3PA'][i] != 'DNP')
-                                                                      and (player_stats_df['3PA'][i] != '') else None,
-                    three_point_pct=player_stats_df['3P%'][i] if (player_stats_df['3P%'][i] != 'DNP')
-                                                                 and (player_stats_df['3P%'][i] != '') else None,
-                    two_pointers=player_stats_df['2P'][i] if (player_stats_df['2P'][i] != 'DNP')
-                                                             and (player_stats_df['2P'][i] != '') else None,
-                    two_point_attempts=player_stats_df['2PA'][i] if (player_stats_df['2PA'][i] != 'DNP')
-                                                                    and (player_stats_df['2PA'][i] != '') else None,
-                    two_point_pct=player_stats_df['2P%'][i] if (player_stats_df['2P%'][i] != 'DNP')
-                                                               and (player_stats_df['2P%'][i] != '') else None,
-                    effective_field_goal_pct=player_stats_df['eFG%'][i] if (player_stats_df['eFG%'][i] != 'DNP')
-                                                                           and (player_stats_df['eFG%'][
-                                                                                    i] != '') else None,
-                    free_throws=player_stats_df['FT'][i] if (player_stats_df['FT'][i] != 'DNP')
-                                                            and (player_stats_df['FT'][i] != '') else None,
-                    free_throw_attempts=player_stats_df['FTA'][i] if (player_stats_df['FTA'][i] != 'DNP')
-                                                                     and (player_stats_df['FTA'][i] != '') else None,
-                    free_throw_pct=player_stats_df['FT%'][i] if (player_stats_df['FT%'][i] != 'DNP')
-                                                                and (player_stats_df['FT%'][i] != '') else None,
-                    offensive_rebounds=player_stats_df['ORB'][i] if (player_stats_df['ORB'][i] != 'DNP')
-                                                                    and (player_stats_df['ORB'][i] != '') else None,
-                    defensive_rebounds=player_stats_df['DRB'][i] if (player_stats_df['DRB'][i] != 'DNP')
-                                                                    and (player_stats_df['DRB'][i] != '') else None,
-                    total_rebounds=player_stats_df['TRB'][i] if (player_stats_df['TRB'][i] != 'DNP')
-                                                                and (player_stats_df['TRB'][i] != '') else None,
-                    assists=player_stats_df['AST'][i] if (player_stats_df['AST'][i] != 'DNP')
-                                                         and (player_stats_df['AST'][i] != '') else None,
-                    steals=player_stats_df['STL'][i] if (player_stats_df['STL'][i] != 'DNP')
-                                                        and (player_stats_df['STL'][i] != '') else None,
-                    blocks=player_stats_df['BLK'][i] if (player_stats_df['BLK'][i] != 'DNP')
-                                                        and (player_stats_df['BLK'][i] != '') else None,
-                    turnovers=player_stats_df['TOV'][i] if (player_stats_df['TOV'][i] != 'DNP')
-                                                           and (player_stats_df['TOV'][i] != '') else None,
-                    personal_fouls=player_stats_df['PF'][i] if (player_stats_df['PF'][i] != 'DNP')
-                                                               and (player_stats_df['PF'][i] != '') else None,
-                    points=player_stats_df['PTS'][i] if (player_stats_df['PTS'][i] != 'DNP')
-                                                        and (player_stats_df['PTS'][i] != '') else None
-                )
-                session.add(player_stats)
-        session.commit()
-
-
-# HELPER FUNCTIONS
-
-"""
-Get the end-date for the regular season.
-
-@param schedule_dataframe - the data frame of the season schedule.
-@return string of date in postgres format.
-"""
-
-
-def get_season_end_date(schedule_dataframe) -> str:
-    pass
+    populate_season_table(session, scraper, year)
+    populate_player_stats(session, scraper)
 
 
 """
@@ -876,6 +492,335 @@ def populate_team_tables(session: Session, season_id) -> None:
             defensive_free_throws_per_field_goal_attempt=0,
         )
         session.add(tas)
+
+
+"""
+"""
+
+
+def populate_season_table(session: Session, scraper: Scraper, year: int):
+    schedule_df = scraper.scrape_nba_season(year)
+
+    season_start_date = scraper.to_postgres_date(schedule_df['Date'].iloc[0])
+    season_end_date = None
+
+    season = Season(
+        year=f"{year}",
+        friendly_name=f"NBA Season {year - 1}-{year}",
+        season_start=season_start_date,
+        season_end=season_end_date
+    )
+
+    session.add(season)
+    session.flush()
+
+    populate_team_tables(session, season.id)
+    populate_game_table(session, scraper, schedule_df, season)
+
+
+"""
+"""
+
+
+def populate_game_table(session: Session, scraper: Scraper, schedule: pd.DataFrame, season: Season):
+    for i in schedule.index:
+        home_team = schedule['Home/Neutral'][i]
+        away_team = schedule['Visitor/Neutral'][i]
+        game = add_game(session, scraper, schedule, i, season)
+        populate_game_team_table(session, scraper, game, home_team, away_team)
+
+    session.commit()
+
+
+"""
+Populate PlayerStats table.
+"""
+
+
+def populate_player_stats(session: Session, scraper: Scraper):
+
+    # TODO: (#5) Add advanced analytics tables from player page to PlayerStats
+    for player in session.query(Player).all():
+        player_stats_df = scraper.scrape_nba_player(player.unique_code)
+
+        for i in player_stats_df.index[:-1]:
+            if player_stats_df['Season'][i] != '':
+                player_stats = PlayerStats(
+                    player_id=player.id,
+                    type=2 if player_stats_df['Season'][i] == 'Career' else 1,  # for Regular Season
+                    season=player_stats_df['Season'][i] if (player_stats_df['Season'][i] != 'DNP')
+                                                           and (player_stats_df['Season'][i] != '') else None,
+                    games_played=player_stats_df['G'][i] if (player_stats_df['G'][i] != 'DNP')
+                                                            and (player_stats_df['G'][i] != '') else None,
+                    games_started=player_stats_df['GS'][i] if (player_stats_df['GS'][i] != 'DNP')
+                                                              and (player_stats_df['GS'][i] != '') else None,
+                    minutes_played=player_stats_df['MP'][i] if (player_stats_df['MP'][i] != 'DNP')
+                                                               and (player_stats_df['MP'][i] != '') else None,
+                    field_goals=player_stats_df['FG'][i] if (player_stats_df['FG'][i] != 'DNP')
+                                                            and (player_stats_df['FG'][i] != '') else None,
+                    field_goal_attempts=player_stats_df['FGA'][i] if (player_stats_df['FGA'][i] != 'DNP')
+                                                                     and (player_stats_df['FGA'][i] != '') else None,
+                    field_goal_pct=player_stats_df['FG%'][i] if (player_stats_df['FG%'][i] != 'DNP')
+                                                                and (player_stats_df['FG%'][i] != '') else None,
+                    three_pointers=player_stats_df['3P'][i] if (player_stats_df['3P'][i] != 'DNP')
+                                                               and (player_stats_df['3P'][i] != '') else None,
+                    three_point_attempts=player_stats_df['3PA'][i] if (player_stats_df['3PA'][i] != 'DNP')
+                                                                      and (player_stats_df['3PA'][i] != '') else None,
+                    three_point_pct=player_stats_df['3P%'][i] if (player_stats_df['3P%'][i] != 'DNP')
+                                                                 and (player_stats_df['3P%'][i] != '') else None,
+                    two_pointers=player_stats_df['2P'][i] if (player_stats_df['2P'][i] != 'DNP')
+                                                             and (player_stats_df['2P'][i] != '') else None,
+                    two_point_attempts=player_stats_df['2PA'][i] if (player_stats_df['2PA'][i] != 'DNP')
+                                                                    and (player_stats_df['2PA'][i] != '') else None,
+                    two_point_pct=player_stats_df['2P%'][i] if (player_stats_df['2P%'][i] != 'DNP')
+                                                               and (player_stats_df['2P%'][i] != '') else None,
+                    effective_field_goal_pct=player_stats_df['eFG%'][i] if (player_stats_df['eFG%'][i] != 'DNP')
+                                                                           and (player_stats_df['eFG%'][
+                                                                                    i] != '') else None,
+                    free_throws=player_stats_df['FT'][i] if (player_stats_df['FT'][i] != 'DNP')
+                                                            and (player_stats_df['FT'][i] != '') else None,
+                    free_throw_attempts=player_stats_df['FTA'][i] if (player_stats_df['FTA'][i] != 'DNP')
+                                                                     and (player_stats_df['FTA'][i] != '') else None,
+                    free_throw_pct=player_stats_df['FT%'][i] if (player_stats_df['FT%'][i] != 'DNP')
+                                                                and (player_stats_df['FT%'][i] != '') else None,
+                    offensive_rebounds=player_stats_df['ORB'][i] if (player_stats_df['ORB'][i] != 'DNP')
+                                                                    and (player_stats_df['ORB'][i] != '') else None,
+                    defensive_rebounds=player_stats_df['DRB'][i] if (player_stats_df['DRB'][i] != 'DNP')
+                                                                    and (player_stats_df['DRB'][i] != '') else None,
+                    total_rebounds=player_stats_df['TRB'][i] if (player_stats_df['TRB'][i] != 'DNP')
+                                                                and (player_stats_df['TRB'][i] != '') else None,
+                    assists=player_stats_df['AST'][i] if (player_stats_df['AST'][i] != 'DNP')
+                                                         and (player_stats_df['AST'][i] != '') else None,
+                    steals=player_stats_df['STL'][i] if (player_stats_df['STL'][i] != 'DNP')
+                                                        and (player_stats_df['STL'][i] != '') else None,
+                    blocks=player_stats_df['BLK'][i] if (player_stats_df['BLK'][i] != 'DNP')
+                                                        and (player_stats_df['BLK'][i] != '') else None,
+                    turnovers=player_stats_df['TOV'][i] if (player_stats_df['TOV'][i] != 'DNP')
+                                                           and (player_stats_df['TOV'][i] != '') else None,
+                    personal_fouls=player_stats_df['PF'][i] if (player_stats_df['PF'][i] != 'DNP')
+                                                               and (player_stats_df['PF'][i] != '') else None,
+                    points=player_stats_df['PTS'][i] if (player_stats_df['PTS'][i] != 'DNP')
+                                                        and (player_stats_df['PTS'][i] != '') else None
+                )
+                session.add(player_stats)
+        session.commit()
+
+"""
+Add data to game_team database table.
+"""
+
+
+def populate_game_team_table(session: Session, scraper: Scraper, game: Game, home_team: str, away_team: str):
+    game_summary, home_box, away_box = scraper.scrape_nba_match(game.game_code)
+    # Game Summary headers: Team | 1 | 2 | 3 | 4 | (OT) | T | Pace | eFG% | TOV% | ORB% | FT/FGA | ORtg
+
+    home_box_team_stats = home_box.iloc[-1]
+    home_team_game_summary = game_summary.iloc[1]
+    away_box_team_stats = away_box.iloc[-1]
+    away_team_game_summary = game_summary.iloc[0]
+
+    game_home_team = GameTeam(
+        game_id=game.id,
+        team_id=session.query(Team.id).filter(Team.name == home_team).scalar_subquery(),
+        team_home_away_type=1
+    )
+
+    session.add(game_home_team)
+    session.flush()
+
+    populate_game_team_log_table(session, game_home_team, home_team_game_summary, home_box_team_stats)
+
+    for i in home_box.index[:-1]:
+        player_name = home_box['Players'][i]
+        player_code = home_box['Player Code'][i]
+        player = session.query(Player).filter(
+            Player.unique_code == player_code and Player.friendly_name == player_name).one_or_none()
+
+        if player is None:
+            player = add_player(session, player_name, player_code)
+            add_player_team(session, player, game_home_team)
+
+        add_game_player_log(session, home_box, i, player, game_home_team)
+
+    game_away_team = GameTeam(
+        game_id=game.id,
+        team_id=session.query(Team.id).filter(Team.name == away_team).scalar_subquery(),
+        team_home_away_type=2
+    )
+    session.add(game_away_team)
+    session.flush()
+
+    for i in away_box.index[:-1]:
+        player_name = away_box['Players'][i]
+        player_code = away_box['Player Code'][i]
+        player = session.query(Player).filter(
+            Player.unique_code == player_code and Player.friendly_name == player_name).one_or_none()
+
+        if player is None:
+            player = add_player(session, player_name, player_code)
+            add_player_team(session, player, game_away_team)
+
+        add_game_player_log(session, away_box, i, player, game_away_team)
+
+
+def populate_game_team_log_table(session: Session, game_team: GameTeam, game_summary: pd.DataFrame,
+                                 team_box_stats: pd.DataFrame):
+    gtl = GameTeamLog(
+        game_team_id=game_team.id,
+
+        total_points=game_summary['T'],
+        first_quarter_points=game_summary['1'],
+        second_quarter_points=game_summary['2'],
+        third_quarter_points=game_summary['3'],
+        fourth_quarter_points=game_summary['4'],
+        overtime_points=None,  # TODO: Configure OT calculation.
+
+        minutes_played=team_box_stats['MP'],
+        field_goals=team_box_stats['FG'],
+        field_goal_attempts=team_box_stats['FGA'],
+        field_goal_pct=team_box_stats['FG%'],
+        three_pointers=team_box_stats['3P'],
+        three_point_attempts=team_box_stats['3PA'],
+        three_point_pct=team_box_stats['3P%'],
+        free_throws=team_box_stats['FT'],
+        free_throw_attempts=team_box_stats['FTA'],
+        free_throw_pct=team_box_stats['FT%'],
+        offensive_rebounds=team_box_stats['ORB'],
+        defensive_rebounds=team_box_stats['DRB'],
+        total_rebounds=team_box_stats['TRB'],
+        assists=team_box_stats['AST'],
+        steals=team_box_stats['STL'],
+        blocks=team_box_stats['BLK'],
+        turnovers=team_box_stats['TOV'],
+        personal_fouls=team_box_stats['PF'],
+        points=team_box_stats['PTS'],
+        plus_minus=None,
+
+        true_shooting_pct=team_box_stats['TS%'],
+        effective_field_goal_pct=team_box_stats['eFG%'],
+        three_point_attempt_rate=team_box_stats['3PAr'],
+        free_throw_attempt_rate=team_box_stats['FTr'],
+        offensive_rebound_pct=team_box_stats['ORB%'],
+        defensive_rebound_pct=team_box_stats['DRB%'],
+        total_rebound_pct=team_box_stats['TRB%'],
+        assist_pct=team_box_stats['AST%'],
+        steal_pct=team_box_stats['STL%'],
+        block_pct=team_box_stats['BLK%'],
+        turnover_pct=team_box_stats['TOV%'],
+        usage_pct=team_box_stats['USG%'],
+        offensive_rating=team_box_stats['ORtg'],
+        defensive_rating=team_box_stats['DRtg'],
+        box_plus_minus=None,
+        pace=game_summary['Pace'],
+        free_throws_per_field_goal_attempt=game_summary['FT/FGA'],
+    )
+    session.add(gtl)
+
+
+def add_player(session: Session, player_name: str, player_code: str) -> Player:
+    player = Player(
+        unique_code=player_code,
+        first_name=player_name.split()[0],
+        last_name=player_name.split()[1],
+        friendly_name=player_name
+    )
+
+    session.add(player)
+    session.flush()
+
+    return player
+
+
+def add_player_team(session: Session, player: Player, game_team):
+    player_team = PlayerTeam(
+        player_id=player.id,
+        team_id=game_team.team_id,
+        # TODO: Replace datetime.now to actual date.
+        start_date=datetime.now()
+    )
+    session.add(player_team)
+
+
+def add_game_player_log(session: Session, box_df: pd.DataFrame, i: int, player: Player, game_team: GameTeam):
+    if ("Did Not" in box_df['MP'][i]) or ("Not With" in box_df['MP'][i]):
+        game_player_log = GamePlayerLog(
+            player_id=player.id,
+            game_team_id=game_team.id
+        )
+    else:
+        game_player_log = GamePlayerLog(
+            player_id=player.id,
+            game_team_id=game_team.id,
+
+            minutes_played=box_df['MP'][i] if (box_df['MP'][i] != '') else None,
+            field_goals=box_df['FG'][i] if (box_df['FG'][i] != '') else None,
+            field_goal_attempts=box_df['FGA'][i] if (box_df['FGA'][i] != '') else None,
+            field_goal_pct=box_df['FG%'][i] if (box_df['FG%'][i] != '') else None,
+            three_pointers=box_df['3P'][i] if (box_df['3P'][i] != '') else None,
+            three_point_attempts=box_df['3PA'][i] if (box_df['3PA'][i] != '') else None,
+            three_point_pct=box_df['3P%'][i] if (box_df['3P%'][i] != '') else None,
+            free_throws=box_df['FT'][i] if (box_df['FT'][i] != '') else None,
+            free_throw_attempts=box_df['FTA'][i] if (box_df['FTA'][i] != '') else None,
+            free_throw_pct=box_df['FT%'][i] if (box_df['FT%'][i] != '') else None,
+            offensive_rebounds=box_df['ORB'][i] if (box_df['ORB'][i] != '') else None,
+            defensive_rebounds=box_df['DRB'][i] if (box_df['DRB'][i] != '') else None,
+            total_rebounds=box_df['TRB'][i] if (box_df['TRB'][i] != '') else None,
+            assists=box_df['AST'][i] if (box_df['AST'][i] != '') else None,
+            steals=box_df['STL'][i] if (box_df['STL'][i] != '') else None,
+            blocks=box_df['BLK'][i] if (box_df['BLK'][i] != '') else None,
+            turnovers=box_df['TOV'][i] if (box_df['TOV'][i] != '') else None,
+            personal_fouls=box_df['PF'][i] if (box_df['PF'][i] != '') else None,
+            points=box_df['PTS'][i] if (box_df['PTS'][i] != '') else None,
+            plus_minus=box_df['+/-'][i] if (box_df['+/-'][i] != '') else None,
+
+            true_shooting_pct=box_df['TS%'][i] if (box_df['TS%'][i] != '') else None,
+            effective_field_goal_pct=box_df['eFG%'][i] if (box_df['eFG%'][i] != '') else None,
+            three_point_attempt_rate=box_df['3PAr'][i] if (box_df['3PAr'][i] != '') else None,
+            free_throw_attempt_rate=box_df['FTr'][i] if (box_df['FTr'][i] != '') else None,
+            offensive_rebound_pct=box_df['ORB%'][i] if (box_df['ORB%'][i] != '') else None,
+            defensive_rebound_pct=box_df['DRB%'][i] if (box_df['DRB%'][i] != '') else None,
+            total_rebound_pct=box_df['TRB%'][i] if (box_df['TRB%'][i] != '') else None,
+            assist_pct=box_df['AST%'][i] if (box_df['AST%'][i] != '') else None,
+            steal_pct=box_df['STL%'][i] if (box_df['STL%'][i] != '') else None,
+            block_pct=box_df['BLK%'][i] if (box_df['BLK%'][i] != '') else None,
+            turnover_pct=box_df['TOV%'][i] if (box_df['TOV%'][i] != '') else None,
+            usage_pct=box_df['USG%'][i] if (box_df['USG%'][i] != '') else None,
+            offensive_rating=box_df['ORtg'][i] if (box_df['ORtg'][i] != '') else None,
+            defensive_rating=box_df['DRtg'][i] if (box_df['DRtg'][i] != '') else None,
+            box_plus_minus=box_df['BPM'][i] if (box_df['BPM'][i] != '') else None
+        )
+    session.add(game_player_log)
+
+# HELPER FUNCTIONS
+
+
+"""
+Add game to the database.
+
+@param session - SQLAlchemy Session
+@param scraper - Scraper object.
+@param schedule - Pandas Dataframe of schedule where the game is from.
+@param i - index of the schedule to look for.
+"""
+
+
+def add_game(session: Session, scraper: Scraper, schedule: pd.DataFrame, i: int, season: Season) -> Game:
+    # Create game object
+    game_datetime = scraper.to_postgres_datetime(schedule['Date'][i], schedule['Start (ET)'][i])
+    home_team = schedule['Home/Neutral'][i]
+    away_team = schedule['Visitor/Neutral'][i]
+    game_code = scraper.get_game_code(schedule['Date'][i], home_team)
+
+    # TODO: (#3) Correct assignment of game types.
+    game = Game(
+        season_id=season.id,
+        type=2,  # 2: regular season
+        start_datetime=game_datetime,
+        game_code=game_code
+    )
+    session.add(game)
+    session.flush()
+    return game
 
 
 """

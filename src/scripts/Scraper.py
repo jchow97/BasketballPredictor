@@ -61,7 +61,7 @@ class Scraper:
     @return pandas DataFrame of the season schedule.
     """
 
-    def scrape_nba_season(self, season) -> pd.DataFrame or None:
+    def scrape_nba_season(self, season: int) -> pd.DataFrame or None:
         print(f"Beginning scrape for {season} season.")
         # TODO: (#7) Add the summer months (july, aug, sept) to the months being scraped.
         # TODO: revert temporary changes.
