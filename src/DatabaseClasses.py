@@ -10,7 +10,7 @@ import psycopg2
 
 Base = declarative_base()
 username = 'jeffreychow'
-port = ''
+port = '5432'
 database = 'mock_nba_database'
 
 
