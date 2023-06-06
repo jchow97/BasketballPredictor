@@ -301,24 +301,23 @@ class Scraper:
 
     """
     Converts date string from basketball-reference to PostgreSQL date format
-    @param date_string - Basketball-reference date string format.
-    @return string - formatted date string.
+    @param date_str - Basketball-reference date string format.
+    @return string - PostgreSQL formatted date string.
     """
 
-    def to_postgres_date(self, date_string: str):
+    def to_postgres_date(self, date_str: str) -> str:
         # Parse the input string into a datetime object
-        date = datetime.strptime(date_string, '%a, %b %d, %Y')
-
-        # Return the date in the PostgresSQL date format
-        return date.strftime('%Y-%m-%d')
+        date = datetime.strptime(date_str, '%a, %b %d, %Y')
+        return date.strftime('%Y-%m-%d %H:%M:%S')
 
     """
-    Converts date string from basketball-reference to PostgreSQL date format
-    @param date_string - Basketball-reference date string format.
-    @return string - formatted date string.
+    Converts date and time from basketball-reference to PostgreSQL date format
+    @param date_str - Basketball-reference date string format.
+    @param time_str - Basketball-reference time string format
+    @return string - PostgreSQL formatted date string.
     """
 
-    def to_postgres_datetime(self, date_str: str, time_str: str):
+    def to_postgres_datetime(self, date_str: str, time_str: str) -> str:
         # Parse the input string into a datetime object
         formatted_date = datetime.strptime(date_str, '%a, %b %d, %Y').date()
         time_str = time_str.replace('p', 'PM')

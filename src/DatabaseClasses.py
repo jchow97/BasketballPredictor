@@ -343,11 +343,14 @@ def initialize_database(year, database='mock_nba_database'):
     schedule_df = s.scrape_nba_season(year)
     players = dict()
 
+    season_start_date = s.to_postgres_date(schedule_df['Date'].iloc[0])
+    season_end_date = get_season_end_date(schedule_df)
+
     season = Season(
         year=f"{year}",
         friendly_name=f"NBA Season {year - 1}-{year}",
-        season_start=s.to_postgres_date(schedule_df['Date'].iloc[0]),
-        season_end=get_season_end_date(schedule_df)
+        season_start=season_start_date,
+        season_end=season_end_date
     )
 
     session.add(season)
