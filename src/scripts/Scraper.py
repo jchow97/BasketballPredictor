@@ -3,10 +3,11 @@ from urllib.error import HTTPError
 import pandas as pd
 import requests
 from datetime import datetime
-from src.common.constants import TEAM_ABBRV, MONTHS_ABBRV, MONTHS
+
+from pandas import DataFrame
+
+from src.common.constants import TEAM_ABBRV, MONTHS_ABBRV
 import time
-import re
-from unidecode import unidecode
 
 """
 The scraper should be responsible for generating data frames to form the database. Adding entities to the database 
@@ -40,28 +41,25 @@ class Scraper:
         self.__accessCounter = 0
         self.__timeoutSeconds = 3
 
-    """
-    Scrapes every specified NBA season (seasons, schedules, matches, teams, players) 
-
-    @param seasons - list of seasons to scrape. Note: the 2021-2022 season would be season 2022
-    @param database - PostgresSQL to create the tables in. Default is 'nba_database'
-    @return None
-    """
-
     def scrape_nba_seasons(self, seasons) -> None:
+        """
+        Scrapes every specified NBA season (season, schedules, matches, teams, players).
+        :param seasons: list of seasons to scrape. Note: the 2021-2022 season would be season 2022.
+        :return: None
+        """
+
         print(f"Scrape Everything")
 
         for season in seasons:
             self.scrape_nba_season(season)
 
-    """
-    Scrapes one NBA Season Schedule and returns a collection of schedules.
+    def scrape_nba_season(self, season: int) -> pd.DataFrame or None:
+        """
+        Scrapes one NBA Season Schedule and returns a collection of schedules.
+        :param season: NBA Season to scrape. Note: the 2021-2022 season would be season 2022.
+        :return: Season schedule dataframe.
+        """
 
-    @param season - NBA Season to scrape. Note: the 2021-2022 season would be season 2022
-    @return pandas DataFrame of the season schedule.
-    """
-
-    def scrape_nba_season(self, season) -> pd.DataFrame or None:
         print(f"Beginning scrape for {season} season.")
         # TODO: (#7) Add the summer months (july, aug, sept) to the months being scraped.
         # TODO: revert temporary changes.
@@ -120,15 +118,14 @@ class Scraper:
             print(f"Failed to scrape {season} schedule.")
             return None
 
-    """
-    Scrape the nba match and returns a collection of data frames from the match.
-    
-    @param game_code - game_code string for the website
-    @param url - URL for specific game. Default is None. If specified, overrides specified season.
-    @return Collection of pandas DataFrames
-    """
+    def scrape_nba_match(self, game_code, url=None) -> tuple[DataFrame, DataFrame, DataFrame]:
+        """
+        Scrape the nba match and returns a collection of data frames from the match.
+        :param game_code: Unique game code string for the website.
+        :param url: URL for specific game. Default is None. If specified, overrides specified game code.
+        :return: List of game summary and box score data frames.
+        """
 
-    def scrape_nba_match(self, game_code, url=None) -> list[pd.DataFrame]:
         try:
             if url is None:
                 url = f'https://www.basketball-reference.com/boxscores/{game_code}.html'
@@ -231,27 +228,23 @@ class Scraper:
 
             return game_summary, h_box_score, v_box_score
 
-    """
-    Scrapes one NBA Team and returns a collection of data frames on the team page.
-
-    @param team - team name (e.g. TODO)
-    @param season - year (e.g. 2022 is 2021-2022)
-    @param html_file - relative path for specified html file. Default is None. If specified, overrides specified season.
-    @return Collection of 3 pandas DataFrame
-    """
-
     def scrape_nba_team(self, team, season, html_file=None) -> list[pd.DataFrame]:
+        """
+        Scrapes one NBA Team and returns a collection of data frames on the team page.
+        :param team: Team name.
+        :param season: Year (e.g. 2022 is 2021-2022).
+        :param html_file: relative path for specified html file. Default is None. If specified, overrides specified season.
+        :return: Collection of 3 dataframes.
+        """
         pass
 
-    """
-    Scrapes an NBA Player and returns a collection of data frames on the player page.
-
-    @param player_code - unique player code used to find their stats page.
-    @param url - Specific url of player to scrape. Default is None If specified, ignores player_code input.
-    @return pandas DataFrame of player stats.
-    """
-
     def scrape_nba_player(self, player_code, url=None) -> pd.DataFrame or None:
+        """
+        Scrapes an NBA Player and returns a collection of data frames on the player page.
+        :param player_code: Unique player code used to find their stats page.
+        :param url: Specific url of player to scrape. Default is None If specified, ignores player_code input.
+        :return: Player stats dataframe.
+        """
         last_initial = player_code[0]
         if url is None:
             url = f'https://www.basketball-reference.com/players/{last_initial}/{player_code}.html'
@@ -299,25 +292,23 @@ class Scraper:
 
     # HELPER FUNCTIONS
 
-    """
-    Converts date string from basketball-reference to PostgreSQL date format
-    @param date_str - Basketball-reference date string format.
-    @return string - PostgreSQL formatted date string.
-    """
-
     def to_postgres_date(self, date_str: str) -> str:
+        """
+        Converts date string from basketball-reference to PostgreSQL date format.
+        :param date_str: Basketball-reference date string format.
+        :return: Postgres formatted date string.
+        """
         # Parse the input string into a datetime object
         date = datetime.strptime(date_str, '%a, %b %d, %Y')
         return date.strftime('%Y-%m-%d %H:%M:%S')
 
-    """
-    Converts date and time from basketball-reference to PostgreSQL date format
-    @param date_str - Basketball-reference date string format.
-    @param time_str - Basketball-reference time string format
-    @return string - PostgreSQL formatted date string.
-    """
-
     def to_postgres_datetime(self, date_str: str, time_str: str) -> str:
+        """
+        Converts date and time from basketball-reference to PostgreSQL datetime format
+        :param date_str: Basketball-reference date string format.
+        :param time_str: Basketball-reference time string format.
+        :return: Postgres formatted date string.
+        """
         # Parse the input string into a datetime object
         formatted_date = datetime.strptime(date_str, '%a, %b %d, %Y').date()
         time_str = time_str.replace('p', 'PM')
@@ -326,14 +317,13 @@ class Scraper:
 
         return datetime.combine(formatted_date, formatted_time).strftime('%Y-%m-%d %H:%M:%S')
 
-    """
-    Parse row data from given table.
-
-    @param table - BeautifulSoup Table to Parse
-    @return Nested list of row data for the table.
-    """
-
     def parse_table_rows(self, table, mode=0) -> []:
+        """
+        Parse row data from given table.
+        :param table: Beautiful Soup table to parse.
+        :param mode: Mode to determine which types of table to process. **NOT SURE WHAT THIS IS**
+        :return:
+        """
         # Scrape the values in each row.
         # Can't use List Comprehension because the 'date' column is under 'th' tag and not 'td'.
         rows_data = []
@@ -349,15 +339,13 @@ class Scraper:
                 rows_data.append(data)
         return rows_data
 
-    """
-    Gets the basketball-reference game-code based on the date and home team
-    
-    @param date - date-string
-    @param home_team - home team 3-letter abbreviation.
-    @return string of game code.
-    """
-
     def get_game_code(self, date, home_team) -> str:
+        """
+        Gets the basketball-reference game-code based on the date and home team.
+        :param date: Date string
+        :param home_team: Home team's 3-letter abbreviation.
+        :return: Game Code string.
+        """
         parsed_date = date.split()
         game_date_year = parsed_date[3]
         game_date_month = MONTHS_ABBRV[parsed_date[1]]
@@ -369,16 +357,13 @@ class Scraper:
 
         return game_code
 
-    """
-    Parse table data for team basic and advanced box scores.
-
-    @param basic_table - Team's basic box score.
-    @param adv_table - Team's advanced box score.
-    @return basic_rows, adv_rows - Team's nested list of row data for advanced and box score respectively.
-    TODO add return signature. Not sure how to signature 2 return values.
-    """
-
     def __parse_box_scores(self, basic_table, adv_table):
+        """
+        Parse table data for team basic and advanced box scores.
+        :param basic_table: Team's basic box score.
+        :param adv_table: Team's advanced box score.
+        :return: basic_rows, adv_rows - Team's nested list of row data for advanced and box score respectively.
+        """
         basic_rows = []
         adv_rows = []
         for i in range(2, len(basic_table)):
@@ -399,14 +384,12 @@ class Scraper:
                 adv_rows.append(adv_data)
         return basic_rows, adv_rows
 
-    """
-    Helper function to format column headers to fit SQL header convention, not including special cases.
-
-    @param header - the list of column headers to be formatted.
-    @return list of formatted headers
-    """
-
     def format_headers(self, headers: list[str]) -> list[str]:
+        """
+        Helper function to format column headers to fit SQL header convention, not including special cases.
+        :param headers: The list of column headers to be formatted.
+        :return: List of formatted headers
+        """
         for i in range(len(headers)):
             headers[i] = headers[i].replace("3", "_3")
             headers[i] = headers[i].replace("2", "_2")
