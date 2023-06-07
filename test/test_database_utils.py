@@ -1,6 +1,6 @@
 import unittest
 
-from DatabaseClasses import to_postgres_timestamp
+from models.database_utils import to_postgres_timestamp
 
 
 class TestDatabaseHelpers(unittest.TestCase):
