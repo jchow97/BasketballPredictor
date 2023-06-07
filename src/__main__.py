@@ -1,12 +1,12 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from DatabaseClasses import initialize_database, database, populate_tables
+from DatabaseClasses import initialize_database, populate_tables, database, username
 from scripts.Scraper import Scraper
 
 
 def main():
-    engine = create_engine(f'postgresql+psycopg2://jeffreychow:@localhost:5432/{database}')
+    engine = create_engine(f'postgresql+psycopg2://{username}:@localhost:5432/{database}')
     session = Session(engine)
     scraper = Scraper()
 
