@@ -8,6 +8,7 @@ from models.database import Base, Player, GameType, PlayerStatsType, TeamHomeAwa
     GamePlayerLog
 from scripts.Scraper import Scraper
 
+
 class DatabaseService:
     def __init__(self, session: Session, scraper: Scraper):
         self.session = session
@@ -27,7 +28,6 @@ class DatabaseService:
         # Create tables.
         Base.metadata.drop_all(engine)
         Base.metadata.create_all(engine)
-
 
     def populate_tables(self, year: int) -> None:
         """
@@ -51,10 +51,10 @@ class DatabaseService:
             self.add_player_stats(player)
         self.session.commit()
 
-
     def add_types(self) -> None:
         """
-        Populate the four type tables (game_type, player_stats_type, team_home_away_type, team_stats_type) with known types.
+        Populate the four type tables (game_type, player_stats_type, team_home_away_type, team_stats_type) with known
+        types.
         :return: None
         """
 
@@ -86,7 +86,6 @@ class DatabaseService:
             tst_object = TeamStatsType(type=tst)
             self.session.add(tst_object)
             self.session.commit()
-
 
     def add_teams(self, season_id: int) -> None:
         """
@@ -182,7 +181,6 @@ class DatabaseService:
             )
             self.session.add(tas)
 
-
     # noinspection PyTypeChecker
     def add_season(self, year: int):
         """
@@ -203,7 +201,6 @@ class DatabaseService:
         self.session.add(season)
         self.session.flush()
         return season, schedule_df
-
 
     def add_player_stats(self, player: Player) -> None:
         """
@@ -226,59 +223,58 @@ class DatabaseService:
                     season=player_stats_df['Season'][i] if (player_stats_df['Season'][i] != 'DNP') and (
                             player_stats_df['Season'][i] != '') else None,
                     games_played=player_stats_df['G'][i] if (player_stats_df['G'][i] != 'DNP') and (
-                                player_stats_df['G'][i] != '') else None,
+                            player_stats_df['G'][i] != '') else None,
                     games_started=player_stats_df['GS'][i] if (player_stats_df['GS'][i] != 'DNP') and (
-                                player_stats_df['GS'][i] != '') else None,
+                            player_stats_df['GS'][i] != '') else None,
                     minutes_played=player_stats_df['MP'][i] if (player_stats_df['MP'][i] != 'DNP') and (
-                                player_stats_df['MP'][i] != '') else None,
+                            player_stats_df['MP'][i] != '') else None,
                     field_goals=player_stats_df['FG'][i] if (player_stats_df['FG'][i] != 'DNP') and (
-                                player_stats_df['FG'][i] != '') else None,
+                            player_stats_df['FG'][i] != '') else None,
                     field_goal_attempts=player_stats_df['FGA'][i] if (player_stats_df['FGA'][i] != 'DNP') and (
-                                player_stats_df['FGA'][i] != '') else None,
+                            player_stats_df['FGA'][i] != '') else None,
                     field_goal_pct=player_stats_df['FG%'][i] if (player_stats_df['FG%'][i] != 'DNP') and (
-                                player_stats_df['FG%'][i] != '') else None,
+                            player_stats_df['FG%'][i] != '') else None,
                     three_pointers=player_stats_df['3P'][i] if (player_stats_df['3P'][i] != 'DNP') and (
-                                player_stats_df['3P'][i] != '') else None,
+                            player_stats_df['3P'][i] != '') else None,
                     three_point_attempts=player_stats_df['3PA'][i] if (player_stats_df['3PA'][i] != 'DNP') and (
-                                player_stats_df['3PA'][i] != '') else None,
+                            player_stats_df['3PA'][i] != '') else None,
                     three_point_pct=player_stats_df['3P%'][i] if (player_stats_df['3P%'][i] != 'DNP') and (
-                                player_stats_df['3P%'][i] != '') else None,
+                            player_stats_df['3P%'][i] != '') else None,
                     two_pointers=player_stats_df['2P'][i] if (player_stats_df['2P'][i] != 'DNP') and (
-                                player_stats_df['2P'][i] != '') else None,
+                            player_stats_df['2P'][i] != '') else None,
                     two_point_attempts=player_stats_df['2PA'][i] if (player_stats_df['2PA'][i] != 'DNP') and (
-                                player_stats_df['2PA'][i] != '') else None,
+                            player_stats_df['2PA'][i] != '') else None,
                     two_point_pct=player_stats_df['2P%'][i] if (player_stats_df['2P%'][i] != 'DNP') and (
-                                player_stats_df['2P%'][i] != '') else None,
+                            player_stats_df['2P%'][i] != '') else None,
                     effective_field_goal_pct=player_stats_df['eFG%'][i] if (player_stats_df['eFG%'][i] != 'DNP') and (
-                                player_stats_df['eFG%'][
-                                    i] != '') else None,
+                            player_stats_df['eFG%'][
+                                i] != '') else None,
                     free_throws=player_stats_df['FT'][i] if (player_stats_df['FT'][i] != 'DNP') and (
-                                player_stats_df['FT'][i] != '') else None,
+                            player_stats_df['FT'][i] != '') else None,
                     free_throw_attempts=player_stats_df['FTA'][i] if (player_stats_df['FTA'][i] != 'DNP') and (
-                                player_stats_df['FTA'][i] != '') else None,
+                            player_stats_df['FTA'][i] != '') else None,
                     free_throw_pct=player_stats_df['FT%'][i] if (player_stats_df['FT%'][i] != 'DNP') and (
-                                player_stats_df['FT%'][i] != '') else None,
+                            player_stats_df['FT%'][i] != '') else None,
                     offensive_rebounds=player_stats_df['ORB'][i] if (player_stats_df['ORB'][i] != 'DNP') and (
-                                player_stats_df['ORB'][i] != '') else None,
+                            player_stats_df['ORB'][i] != '') else None,
                     defensive_rebounds=player_stats_df['DRB'][i] if (player_stats_df['DRB'][i] != 'DNP') and (
-                                player_stats_df['DRB'][i] != '') else None,
+                            player_stats_df['DRB'][i] != '') else None,
                     total_rebounds=player_stats_df['TRB'][i] if (player_stats_df['TRB'][i] != 'DNP') and (
-                                player_stats_df['TRB'][i] != '') else None,
+                            player_stats_df['TRB'][i] != '') else None,
                     assists=player_stats_df['AST'][i] if (player_stats_df['AST'][i] != 'DNP') and (
-                                player_stats_df['AST'][i] != '') else None,
+                            player_stats_df['AST'][i] != '') else None,
                     steals=player_stats_df['STL'][i] if (player_stats_df['STL'][i] != 'DNP') and (
-                                player_stats_df['STL'][i] != '') else None,
+                            player_stats_df['STL'][i] != '') else None,
                     blocks=player_stats_df['BLK'][i] if (player_stats_df['BLK'][i] != 'DNP') and (
-                                player_stats_df['BLK'][i] != '') else None,
+                            player_stats_df['BLK'][i] != '') else None,
                     turnovers=player_stats_df['TOV'][i] if (player_stats_df['TOV'][i] != 'DNP') and (
-                                player_stats_df['TOV'][i] != '') else None,
+                            player_stats_df['TOV'][i] != '') else None,
                     personal_fouls=player_stats_df['PF'][i] if (player_stats_df['PF'][i] != 'DNP') and (
-                                player_stats_df['PF'][i] != '') else None,
+                            player_stats_df['PF'][i] != '') else None,
                     points=player_stats_df['PTS'][i] if (player_stats_df['PTS'][i] != 'DNP') and (
-                                player_stats_df['PTS'][i] != '') else None
+                            player_stats_df['PTS'][i] != '') else None
                 )
                 self.session.add(player_stats)
-
 
     # noinspection DuplicatedCode
     def add_game_teams(self, game: Game, home_team: str, away_team: str) -> None:
@@ -342,7 +338,6 @@ class DatabaseService:
 
             self.add_game_player_log(away_box, i, player, game_away_team)
 
-
     def add_game_team_log(self, game_team: GameTeam, game_summary: pd.DataFrame, team_box_stats: pd.DataFrame):
         """
         Adds a team's game log to the game_team_log database table.
@@ -403,7 +398,6 @@ class DatabaseService:
         )
         self.session.add(gtl)
 
-
     def add_player(self, player_name: str, player_code: str) -> Player:
         """
         Add a player to the player database table.
@@ -423,7 +417,6 @@ class DatabaseService:
 
         return player
 
-
     def add_player_team(self, player: Player, game_team) -> None:
         """
         Add a player-team relationship to the player_team database table.
@@ -438,7 +431,6 @@ class DatabaseService:
             start_date=datetime.now()
         )
         self.session.add(player_team)
-
 
     def add_game_player_log(self, box_df: pd.DataFrame, i: int, player: Player, game_team: GameTeam) -> None:
         """
@@ -497,7 +489,6 @@ class DatabaseService:
                 box_plus_minus=box_df['BPM'][i] if (box_df['BPM'][i] != '') else None
             )
         self.session.add(game_player_log)
-
 
     # noinspection PyTypeChecker
     def add_game(self, schedule: pd.DataFrame, i: int, season: Season) -> Game:
