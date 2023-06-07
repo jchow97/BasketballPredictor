@@ -180,6 +180,7 @@ def add_teams(session: Session, season_id) -> None:
         session.add(tas)
 
 
+# noinspection PyTypeChecker
 def add_season(session: Session, scraper: Scraper, year: int):
     """
     Adds season to the season db table.
@@ -191,13 +192,11 @@ def add_season(session: Session, scraper: Scraper, year: int):
     schedule_df = scraper.scrape_nba_season(year)
 
     season_start_date = scraper.to_postgres_date(schedule_df['Date'].iloc[0])
-    season_end_date = None
 
     season = Season(
         year=f"{year}",
         friendly_name=f"NBA Season {year - 1}-{year}",
         season_start=season_start_date,
-        season_end=season_end_date
     )
 
     session.add(season)
@@ -225,63 +224,64 @@ def add_player_stats(session: Session, scraper: Scraper, player: Player) -> None
             player_stats = PlayerStats(
                 player_id=player.id,
                 type=2 if player_stats_df['Season'][i] == 'Career' else 1,  # for Regular Season
-                season=player_stats_df['Season'][i] if (player_stats_df['Season'][i] != 'DNP')
-                                                       and (player_stats_df['Season'][i] != '') else None,
-                games_played=player_stats_df['G'][i] if (player_stats_df['G'][i] != 'DNP')
-                                                        and (player_stats_df['G'][i] != '') else None,
-                games_started=player_stats_df['GS'][i] if (player_stats_df['GS'][i] != 'DNP')
-                                                          and (player_stats_df['GS'][i] != '') else None,
-                minutes_played=player_stats_df['MP'][i] if (player_stats_df['MP'][i] != 'DNP')
-                                                           and (player_stats_df['MP'][i] != '') else None,
-                field_goals=player_stats_df['FG'][i] if (player_stats_df['FG'][i] != 'DNP')
-                                                        and (player_stats_df['FG'][i] != '') else None,
-                field_goal_attempts=player_stats_df['FGA'][i] if (player_stats_df['FGA'][i] != 'DNP')
-                                                                 and (player_stats_df['FGA'][i] != '') else None,
-                field_goal_pct=player_stats_df['FG%'][i] if (player_stats_df['FG%'][i] != 'DNP')
-                                                            and (player_stats_df['FG%'][i] != '') else None,
-                three_pointers=player_stats_df['3P'][i] if (player_stats_df['3P'][i] != 'DNP')
-                                                           and (player_stats_df['3P'][i] != '') else None,
-                three_point_attempts=player_stats_df['3PA'][i] if (player_stats_df['3PA'][i] != 'DNP')
-                                                                  and (player_stats_df['3PA'][i] != '') else None,
-                three_point_pct=player_stats_df['3P%'][i] if (player_stats_df['3P%'][i] != 'DNP')
-                                                             and (player_stats_df['3P%'][i] != '') else None,
-                two_pointers=player_stats_df['2P'][i] if (player_stats_df['2P'][i] != 'DNP')
-                                                         and (player_stats_df['2P'][i] != '') else None,
-                two_point_attempts=player_stats_df['2PA'][i] if (player_stats_df['2PA'][i] != 'DNP')
-                                                                and (player_stats_df['2PA'][i] != '') else None,
-                two_point_pct=player_stats_df['2P%'][i] if (player_stats_df['2P%'][i] != 'DNP')
-                                                           and (player_stats_df['2P%'][i] != '') else None,
-                effective_field_goal_pct=player_stats_df['eFG%'][i] if (player_stats_df['eFG%'][i] != 'DNP')
-                                                                       and (player_stats_df['eFG%'][
-                                                                                i] != '') else None,
-                free_throws=player_stats_df['FT'][i] if (player_stats_df['FT'][i] != 'DNP')
-                                                        and (player_stats_df['FT'][i] != '') else None,
-                free_throw_attempts=player_stats_df['FTA'][i] if (player_stats_df['FTA'][i] != 'DNP')
-                                                                 and (player_stats_df['FTA'][i] != '') else None,
-                free_throw_pct=player_stats_df['FT%'][i] if (player_stats_df['FT%'][i] != 'DNP')
-                                                            and (player_stats_df['FT%'][i] != '') else None,
-                offensive_rebounds=player_stats_df['ORB'][i] if (player_stats_df['ORB'][i] != 'DNP')
-                                                                and (player_stats_df['ORB'][i] != '') else None,
-                defensive_rebounds=player_stats_df['DRB'][i] if (player_stats_df['DRB'][i] != 'DNP')
-                                                                and (player_stats_df['DRB'][i] != '') else None,
-                total_rebounds=player_stats_df['TRB'][i] if (player_stats_df['TRB'][i] != 'DNP')
-                                                            and (player_stats_df['TRB'][i] != '') else None,
-                assists=player_stats_df['AST'][i] if (player_stats_df['AST'][i] != 'DNP')
-                                                     and (player_stats_df['AST'][i] != '') else None,
-                steals=player_stats_df['STL'][i] if (player_stats_df['STL'][i] != 'DNP')
-                                                    and (player_stats_df['STL'][i] != '') else None,
-                blocks=player_stats_df['BLK'][i] if (player_stats_df['BLK'][i] != 'DNP')
-                                                    and (player_stats_df['BLK'][i] != '') else None,
-                turnovers=player_stats_df['TOV'][i] if (player_stats_df['TOV'][i] != 'DNP')
-                                                       and (player_stats_df['TOV'][i] != '') else None,
-                personal_fouls=player_stats_df['PF'][i] if (player_stats_df['PF'][i] != 'DNP')
-                                                           and (player_stats_df['PF'][i] != '') else None,
-                points=player_stats_df['PTS'][i] if (player_stats_df['PTS'][i] != 'DNP')
-                                                    and (player_stats_df['PTS'][i] != '') else None
+                season=player_stats_df['Season'][i] if (player_stats_df['Season'][i] != 'DNP') and (
+                        player_stats_df['Season'][i] != '') else None,
+                games_played=player_stats_df['G'][i] if (player_stats_df['G'][i] != 'DNP') and (
+                            player_stats_df['G'][i] != '') else None,
+                games_started=player_stats_df['GS'][i] if (player_stats_df['GS'][i] != 'DNP') and (
+                            player_stats_df['GS'][i] != '') else None,
+                minutes_played=player_stats_df['MP'][i] if (player_stats_df['MP'][i] != 'DNP') and (
+                            player_stats_df['MP'][i] != '') else None,
+                field_goals=player_stats_df['FG'][i] if (player_stats_df['FG'][i] != 'DNP') and (
+                            player_stats_df['FG'][i] != '') else None,
+                field_goal_attempts=player_stats_df['FGA'][i] if (player_stats_df['FGA'][i] != 'DNP') and (
+                            player_stats_df['FGA'][i] != '') else None,
+                field_goal_pct=player_stats_df['FG%'][i] if (player_stats_df['FG%'][i] != 'DNP') and (
+                            player_stats_df['FG%'][i] != '') else None,
+                three_pointers=player_stats_df['3P'][i] if (player_stats_df['3P'][i] != 'DNP') and (
+                            player_stats_df['3P'][i] != '') else None,
+                three_point_attempts=player_stats_df['3PA'][i] if (player_stats_df['3PA'][i] != 'DNP') and (
+                            player_stats_df['3PA'][i] != '') else None,
+                three_point_pct=player_stats_df['3P%'][i] if (player_stats_df['3P%'][i] != 'DNP') and (
+                            player_stats_df['3P%'][i] != '') else None,
+                two_pointers=player_stats_df['2P'][i] if (player_stats_df['2P'][i] != 'DNP') and (
+                            player_stats_df['2P'][i] != '') else None,
+                two_point_attempts=player_stats_df['2PA'][i] if (player_stats_df['2PA'][i] != 'DNP') and (
+                            player_stats_df['2PA'][i] != '') else None,
+                two_point_pct=player_stats_df['2P%'][i] if (player_stats_df['2P%'][i] != 'DNP') and (
+                            player_stats_df['2P%'][i] != '') else None,
+                effective_field_goal_pct=player_stats_df['eFG%'][i] if (player_stats_df['eFG%'][i] != 'DNP') and (
+                            player_stats_df['eFG%'][
+                                i] != '') else None,
+                free_throws=player_stats_df['FT'][i] if (player_stats_df['FT'][i] != 'DNP') and (
+                            player_stats_df['FT'][i] != '') else None,
+                free_throw_attempts=player_stats_df['FTA'][i] if (player_stats_df['FTA'][i] != 'DNP') and (
+                            player_stats_df['FTA'][i] != '') else None,
+                free_throw_pct=player_stats_df['FT%'][i] if (player_stats_df['FT%'][i] != 'DNP') and (
+                            player_stats_df['FT%'][i] != '') else None,
+                offensive_rebounds=player_stats_df['ORB'][i] if (player_stats_df['ORB'][i] != 'DNP') and (
+                            player_stats_df['ORB'][i] != '') else None,
+                defensive_rebounds=player_stats_df['DRB'][i] if (player_stats_df['DRB'][i] != 'DNP') and (
+                            player_stats_df['DRB'][i] != '') else None,
+                total_rebounds=player_stats_df['TRB'][i] if (player_stats_df['TRB'][i] != 'DNP') and (
+                            player_stats_df['TRB'][i] != '') else None,
+                assists=player_stats_df['AST'][i] if (player_stats_df['AST'][i] != 'DNP') and (
+                            player_stats_df['AST'][i] != '') else None,
+                steals=player_stats_df['STL'][i] if (player_stats_df['STL'][i] != 'DNP') and (
+                            player_stats_df['STL'][i] != '') else None,
+                blocks=player_stats_df['BLK'][i] if (player_stats_df['BLK'][i] != 'DNP') and (
+                            player_stats_df['BLK'][i] != '') else None,
+                turnovers=player_stats_df['TOV'][i] if (player_stats_df['TOV'][i] != 'DNP') and (
+                            player_stats_df['TOV'][i] != '') else None,
+                personal_fouls=player_stats_df['PF'][i] if (player_stats_df['PF'][i] != 'DNP') and (
+                            player_stats_df['PF'][i] != '') else None,
+                points=player_stats_df['PTS'][i] if (player_stats_df['PTS'][i] != 'DNP') and (
+                            player_stats_df['PTS'][i] != '') else None
             )
             session.add(player_stats)
 
 
+# noinspection DuplicatedCode
 def add_game_teams(session: Session, scraper: Scraper, game: Game, home_team: str, away_team: str) -> None:
     """
     Adds the away and home team's game data to game_team database table.
@@ -355,6 +355,7 @@ def add_game_team_log(session: Session, game_team: GameTeam, game_summary: pd.Da
     :param team_box_stats: Team's box score dataframe.
     :return:
     """
+    # noinspection PyTypeChecker
     gtl = GameTeamLog(
         game_team_id=game_team.id,
 
@@ -505,6 +506,7 @@ def add_game_player_log(session: Session, box_df: pd.DataFrame, i: int, player: 
     session.add(game_player_log)
 
 
+# noinspection PyTypeChecker
 def add_game(session: Session, scraper: Scraper, schedule: pd.DataFrame, i: int, season: Season) -> Game:
     """
     Add a game to the game database table.
@@ -518,7 +520,7 @@ def add_game(session: Session, scraper: Scraper, schedule: pd.DataFrame, i: int,
     # Create game object
     game_datetime = scraper.to_postgres_datetime(schedule['Date'][i], schedule['Start (ET)'][i])
     home_team = schedule['Home/Neutral'][i]
-    away_team = schedule['Visitor/Neutral'][i]
+    # away_team = schedule['Visitor/Neutral'][i]
     game_code = scraper.get_game_code(schedule['Date'][i], home_team)
 
     # TODO: (#3) Correct assignment of game types.
@@ -542,7 +544,7 @@ def to_postgres_timestamp(date_string: str) -> str:
     # Convert the input string to a datetime object
     date_obj = datetime.strptime(date_string, '%a, %b %d, %Y')
 
-    # Convert the datetime object to the PostgreSQL timestamp format
+    # Convert the datetime object to the Postgres timestamp format
     postgres_timestamp = date_obj.strftime('%Y-%m-%d %H:%M:%S')
 
     return postgres_timestamp
