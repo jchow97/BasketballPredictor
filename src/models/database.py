@@ -2,9 +2,6 @@ from sqlalchemy import Column, Integer, ForeignKey, DateTime, String, DECIMAL
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
-username = 'jeffreychow'
-port = '5432'
-database = 'nba_dev'
 
 
 class Game(Base):
