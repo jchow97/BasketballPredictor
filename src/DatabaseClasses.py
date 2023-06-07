@@ -6,7 +6,6 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import ForeignKey
 from scripts.Scraper import Scraper
 from common.constants import CURRENT_TEAMS, TEAM_ABBRV
-import psycopg2
 
 Base = declarative_base()
 username = 'jeffreychow'
@@ -18,8 +17,8 @@ class Game(Base):
     __tablename__ = "game"
 
     id = Column(Integer, primary_key=True)
-    season_id = Column(Integer, ForeignKey("season.id"))
-    type = Column(Integer, ForeignKey("game_type.id"))
+    season_id = Column(Integer, ForeignKey("season.id", name='fk_game_season_id'))
+    type = Column(Integer, ForeignKey("game_type.id", name='fk_game_game_type_id'))
     start_datetime = Column(DateTime)
     game_code = Column(String)
 
@@ -28,8 +27,8 @@ class GamePlayerLog(Base):
     __tablename__ = "game_player_log"
 
     id = Column(Integer, primary_key=True)
-    player_id = Column(Integer, ForeignKey("player.id"))
-    game_team_id = Column(Integer, ForeignKey("game_team.id"))
+    player_id = Column(Integer, ForeignKey("player.id", name='fk_game_player_player_id'))
+    game_team_id = Column(Integer, ForeignKey("game_team.id", name='fk_game_player_game_team_id'))
 
     minutes_played = Column(String, default=None)
     field_goals = Column(Integer, default=None)
@@ -72,10 +71,11 @@ class GameTeam(Base):
     __tablename__ = "game_team"
 
     id = Column(Integer, primary_key=True)
-    game_id = Column(Integer, ForeignKey("game.id"))
-    team_id = Column(Integer, ForeignKey("team.id"))
-    team_home_away_type = Column(Integer, ForeignKey("team_home_away_type.id"))
-    game_team_log_id = Column(Integer, ForeignKey("game_team_log.id"))
+    game_id = Column(Integer, ForeignKey("game.id", name='fk_game_team_game_id'))
+    team_id = Column(Integer, ForeignKey("team.id", name='fk_game_team_team_id'))
+    team_home_away_type = Column(Integer, ForeignKey("team_home_away_type.id",
+                                                     name='fk_game_team_team_home_away_type_id'))
+    game_team_log_id = Column(Integer, ForeignKey("game_team_log.id", name='fk_game_team_game_team_log_id'))
     spread = Column(DECIMAL)
     odds = Column(DECIMAL)
     money_line_odds = Column(DECIMAL)
@@ -86,7 +86,7 @@ class GameTeamLog(Base):
     __tablename__ = "game_team_log"
 
     id = Column(Integer, primary_key=True)
-    game_team_id = Column(Integer, ForeignKey("game_team.id"))
+    game_team_id = Column(Integer, ForeignKey("game_team.id", name='fk_game_team_log_game_team_id'))
 
     total_points = Column(Integer)
     first_quarter_points = Column(Integer)
@@ -140,7 +140,7 @@ class GameType(Base):
     __tablename__ = "game_type"
 
     id = Column(Integer, primary_key=True)
-    type = Column(String)  # preseason, regular season, play-in, playoffs (CQF, CSF, CF, F)
+    type = Column(String)
 
 
 class Player(Base):
@@ -158,8 +158,8 @@ class PlayerStats(Base):
     __tablename__ = "player_stats"
 
     id = Column(Integer, primary_key=True)
-    player_id = Column(Integer, ForeignKey("player.id"))
-    type = Column(Integer, ForeignKey("player_stats_type.id"))  # 0: season 1: career
+    player_id = Column(Integer, ForeignKey("player.id", name='fk_player_stats_player_id'))
+    type = Column(Integer, ForeignKey("player_stats_type.id", name='fk_player_stats_player_stats_type_id'))
     season = Column(String)
     age = Column(Integer, default=None)
 
@@ -201,8 +201,8 @@ class PlayerTeam(Base):
     __tablename__ = "player_team"
 
     id = Column(Integer, primary_key=True)
-    player_id = Column(Integer, ForeignKey("player.id"))
-    team_id = Column(Integer, ForeignKey("team.id"))
+    player_id = Column(Integer, ForeignKey("player.id", name='fk_player_team_player_id'))
+    team_id = Column(Integer, ForeignKey("team.id", name='fk_player_team_team_id'))
     start_date = Column(DateTime)
     end_date = Column(DateTime)
 
@@ -225,9 +225,10 @@ class Team(Base):
     __tablename__ = "team"
 
     id = Column(Integer, primary_key=True)
-    season_id = Column(Integer, ForeignKey("season.id"))
-    team_stats_id = Column(Integer, ForeignKey("team_stats.id"))
-    team_advanced_stats_id = Column(Integer, ForeignKey("team_advanced_stats.id"))
+    season_id = Column(Integer, ForeignKey("season.id", name='fk_team_season_id'))
+    team_stats_id = Column(Integer, ForeignKey("team_stats.id", name='fk_team_team_stats_id'))
+    team_advanced_stats_id = Column(Integer, ForeignKey("team_advanced_stats.id",
+                                                        name='fk_team_team_advanced_stats_id'))
     name = Column(String)
     abbreviation = Column(String(3))
     friendly_name = Column(String)
@@ -264,8 +265,8 @@ class TeamStats(Base):
     __tablename__ = "team_stats"
 
     id = Column(Integer, primary_key=True)
-    team_id = Column(Integer, ForeignKey("team.id"))
-    type = Column(Integer, ForeignKey("team_stats_type.id"))
+    team_id = Column(Integer, ForeignKey("team.id", name='fk_team_stats_team_id'))
+    type = Column(Integer, ForeignKey("team_stats_type.id", name='fk_team_stats_team_stats_type_id'))
     minutes_played = Column(String(6))
     field_goals = Column(DECIMAL)
     field_goal_attempts = Column(DECIMAL)
@@ -300,7 +301,7 @@ class TeamAdvancedStats(Base):
     __tablename__ = "team_advanced_stats"
 
     id = Column(Integer, primary_key=True)
-    team_id = Column(Integer, ForeignKey("team.id"))
+    team_id = Column(Integer, ForeignKey("team.id", name='fk_team_advanced_stats_team_id'))
     wins = Column(Integer)
     losses = Column(Integer)
     pythagorean_wins = Column(Integer)
@@ -331,17 +332,10 @@ def initialize_database() -> None:
     :return: None
     """
 
-    # TODO: (#2) Database persistence does not exist
-    conn = psycopg2.connect(f"dbname=nba_master user={username}")
-    conn.autocommit = True
-    cur = conn.cursor()
-    cur.execute(f'DROP DATABASE IF EXISTS {database};')
-    cur.execute(f'CREATE DATABASE {database};')
-    conn.close()
-
     engine = create_engine(f'postgresql+psycopg2://{username}:@localhost:{port}/{database}')
 
     # Create tables.
+    Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
 
 
