@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
-
-from DatabaseClasses import initialize_database, populate_tables, database, username
+from models.database_utils import initialize_database, populate_tables
+from models.database import username, database
 from scripts.Scraper import Scraper
 
 
