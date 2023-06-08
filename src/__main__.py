@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
-from models.database_utils import DatabaseService
+from service.database_service import DatabaseService
 from scripts.Scraper import Scraper
 
 username = 'jeffreychow'
