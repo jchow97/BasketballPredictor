@@ -9,30 +9,17 @@ from pandas import DataFrame
 from src.common.constants import TEAM_ABBRV, MONTHS_ABBRV
 import time
 
-"""
-The scraper should be responsible for generating data frames to form the database. Adding entities to the database 
-should be done elsewhere
-
-Pages (links) that the scraper would like to scrape:
- - Note: f-strings
- - date: date in YYYYMMDD format
- - team_abrv: abbreviation of team
- - year: year in YYYY format
- - month: month in lowercase string format (e.g. october, november, etc.)
- - last_initial: first letter of the player's last name (e.g. Damian Lillard's last_initial is l)
- - player_code: string composed of: first 5 chars of last name + first 2 chars of first name + 01 
-    (incremented for duplicate names)
-    - e.g. Damian Lillard -> lillada01; Gary Payton Sr. -> paytoga01; Gary Payton II -> paytoga02.
-        - Number at the end is incremented by whichever player came into the league first (? probably)
-
-    NBA Schedule: f"https://www.basketball-reference.com/leagues/NBA_{year}_games-{month}.html"
-    Match/Box Score Page: f"https://www.basketball-reference.com/boxscores/{date}0{home_team_abrv}.html"
-    Team Page: f"https://www.basketball-reference.com/teams/{team_abrv}/{year}.html"
-    Player Page: f"https://www.basketball-reference.com/players/{last_initial}/{player_code}.html"
-"""
-
 
 class Scraper:
+    """
+    This class is responsible for web-scraping for data.
+
+    Example of pages (links) that the scraper would like to scrape:
+        NBA Schedule: f"https://www.basketball-reference.com/leagues/NBA_{year}_games-{month}.html"
+        Match/Box Score Page: f"https://www.basketball-reference.com/boxscores/{date}0{home_team_abrv}.html"
+        Team Page: f"https://www.basketball-reference.com/teams/{team_abrv}/{year}.html"
+        Player Page: f"https://www.basketball-reference.com/players/{last_initial}/{player_code}.html"
+    """
 
     def __init__(self):
         # TODO: Consider upgrading Agent to an entire request header
@@ -49,7 +36,6 @@ class Scraper:
         """
 
         print(f"Scrape Everything")
-
         for season in seasons:
             self.scrape_nba_season(season)
 
@@ -62,7 +48,7 @@ class Scraper:
 
         print(f"Beginning scrape for {season} season.")
         # TODO: (#7) Add the summer months (july, aug, sept) to the months being scraped.
-        months = ["october", "november", "december", "january", "february", "march", "april", "may", "june"]
+        months = ["june"]
 
         # List of DataFrame, each df represents one month in the calendar
         schedule = []
@@ -71,23 +57,11 @@ class Scraper:
             # Open URL, request the html, and create BeautifulSoup object
             try:
                 url = f"https://www.basketball-reference.com/leagues/NBA_{season}_games-{month}.html"
-                time.sleep(self.__timeoutSeconds)
-                html = requests.get(url, headers={'User-Agent': self.__USER_AGENT})
-                self.__accessCounter += 1
-                print("count: " + str(self.__accessCounter) + " url: " + url)
-
-                if html.status_code == 404:
-                    print("The month or season does not exist.")
-                    return None
-
-                soup = BeautifulSoup(html.text, 'lxml')
+                soup = self.send_request(url)
             except HTTPError as e:
                 print("An HTTPError occurred!")
                 print(e)
                 # TODO: (#8) Add exception handling to Scraper class
-                return None
-            except:
-                print("Unknown Error")
                 return None
             else:
                 # Extract headers into a list. Expected headers:
@@ -112,7 +86,7 @@ class Scraper:
             # Concatenate all the months together into one single data frame.
             final_schedule = pd.concat(schedule, ignore_index=True)
             return final_schedule
-        except:
+        except HTTPError:
             print(f"Failed to scrape {season} schedule.")
             return None
 
@@ -128,12 +102,7 @@ class Scraper:
             if url is None:
                 url = f'https://www.basketball-reference.com/boxscores/{game_code}.html'
 
-            time.sleep(self.__timeoutSeconds)
-            html = requests.get(url, headers={'User-Agent': self.__USER_AGENT})
-            self.__accessCounter += 1
-            print("count: " + str(self.__accessCounter) + " url: " + url)
-
-            soup = BeautifulSoup(html.text, 'lxml')
+            soup = self.send_request(url)
         except HTTPError as e:
             print("Error occurred!")
             print(e)
@@ -172,8 +141,8 @@ class Scraper:
             box_headers_basic = [th.get_text() for th in soup.find('table').find_all('th')][2:23]
             box_headers_basic[0] = 'Players'
 
-            # Changed adv headers to be statically set here, rather than dynamically scraped because Play-In Game's don't
-            # track BPM.
+            # Changed adv headers to be statically set here, rather than dynamically scraped because Play-In Game's
+            # don't track BPM.
             # TODO: (#8) Add dynamic handling for Play-In Games when scraping matches
 
             # if len(ls_headers) > 6:  # checking if there was OT need to make dynamic (e.g. 2OT, 3OT)
@@ -202,27 +171,13 @@ class Scraper:
 
             # Scrape the values in each row for the visitor team in both Basic and Advanced Box Scores.
             v_rows_basic, v_rows_adv = self.__parse_box_scores(visitor_basic_table, visitor_adv_table)
-
-            # TODO: (#8) Add dynamic handling for Play-In Games when scraping matches
-            if len(v_rows_adv[0]) < 15:
-                for row in v_rows_adv:
-                    row.append(None)
-
-            v_basic_df = pd.DataFrame(v_rows_basic, columns=box_headers_basic)
-            v_adv_df = pd.DataFrame(v_rows_adv, columns=box_headers_adv)
-            v_box_score = pd.concat([v_basic_df, v_adv_df], axis=1)
+            v_box_score = self.generate_boxscore_dataframes(box_headers_basic, v_rows_basic,
+                                                            box_headers_adv, v_rows_adv)
 
             # Scrape the values in each row for the home team in both Basic and Advanced Box Scores.
             h_rows_basic, h_rows_adv = self.__parse_box_scores(home_basic_table, home_adv_table)
-
-            # TODO: (#8) Add dynamic handling for Play-In Games when scraping matches
-            if len(h_rows_adv[0]) < 15:
-                for row in h_rows_adv:
-                    row.append(None)
-
-            h_basic_df = pd.DataFrame(h_rows_basic, columns=box_headers_basic)
-            h_adv_df = pd.DataFrame(h_rows_adv, columns=box_headers_adv)
-            h_box_score = pd.concat([h_basic_df, h_adv_df], axis=1)
+            h_box_score = self.generate_boxscore_dataframes(box_headers_basic, h_rows_basic,
+                                                            box_headers_adv, h_rows_adv)
 
             return game_summary, h_box_score, v_box_score
 
@@ -231,7 +186,8 @@ class Scraper:
         Scrapes one NBA Team and returns a collection of data frames on the team page.
         :param team: Team name.
         :param season: Year (e.g. 2022 is 2021-2022).
-        :param html_file: relative path for specified html file. Default is None. If specified, overrides specified season.
+        :param html_file: relative path for specified html file. Default is None.
+                          If specified, overrides specified season.
         :return: Collection of 3 dataframes.
         """
         pass
@@ -248,12 +204,7 @@ class Scraper:
             url = f'https://www.basketball-reference.com/players/{last_initial}/{player_code}.html'
 
         try:
-            time.sleep(self.__timeoutSeconds)
-            html = requests.get(url, headers={'User-Agent': self.__USER_AGENT})
-            self.__accessCounter += 1
-            print("count: " + str(self.__accessCounter) + " url: " + url)
-
-            soup = BeautifulSoup(html.text, 'lxml')
+            soup = self.send_request(url)
         except HTTPError as e:
             print("Error occured!")
             print(e)
@@ -290,7 +241,20 @@ class Scraper:
 
     # HELPER FUNCTIONS
 
-    def to_postgres_date(self, date_str: str) -> str:
+    def send_request(self, url) -> BeautifulSoup or None:
+        time.sleep(self.__timeoutSeconds)
+        html = requests.get(url, headers={'User-Agent': self.__USER_AGENT})
+        self.__accessCounter += 1
+        print("count: " + str(self.__accessCounter) + " url: " + url)
+
+        if html.status_code == 404:
+            print("The month or season does not exist.")
+            return None
+
+        return BeautifulSoup(html.text, 'lxml')
+
+    @staticmethod
+    def to_postgres_date(date_str: str) -> str:
         """
         Converts date string from basketball-reference to PostgreSQL date format.
         :param date_str: Basketball-reference date string format.
@@ -300,7 +264,8 @@ class Scraper:
         date = datetime.strptime(date_str, '%a, %b %d, %Y')
         return date.strftime('%Y-%m-%d %H:%M:%S')
 
-    def to_postgres_datetime(self, date_str: str, time_str: str) -> str:
+    @staticmethod
+    def to_postgres_datetime(date_str: str, time_str: str) -> str:
         """
         Converts date and time from basketball-reference to PostgreSQL datetime format
         :param date_str: Basketball-reference date string format.
@@ -315,7 +280,8 @@ class Scraper:
 
         return datetime.combine(formatted_date, formatted_time).strftime('%Y-%m-%d %H:%M:%S')
 
-    def parse_table_rows(self, table, mode=0) -> []:
+    @staticmethod
+    def parse_table_rows(table, mode=0) -> []:
         """
         Parse row data from given table.
         :param table: Beautiful Soup table to parse.
@@ -337,7 +303,8 @@ class Scraper:
                 rows_data.append(data)
         return rows_data
 
-    def get_game_code(self, date, home_team) -> str:
+    @staticmethod
+    def get_game_code(date, home_team) -> str:
         """
         Gets the basketball-reference game-code based on the date and home team.
         :param date: Date string
@@ -355,7 +322,8 @@ class Scraper:
 
         return game_code
 
-    def __parse_box_scores(self, basic_table, adv_table):
+    @staticmethod
+    def __parse_box_scores(basic_table, adv_table) -> tuple[list[list], list[list]]:
         """
         Parse table data for team basic and advanced box scores.
         :param basic_table: Team's basic box score.
@@ -382,7 +350,21 @@ class Scraper:
                 adv_rows.append(adv_data)
         return basic_rows, adv_rows
 
-    def format_headers(self, headers: list[str]) -> list[str]:
+    @staticmethod
+    def generate_boxscore_dataframes(basic_headers: list, basic_rows: list[list],
+                                     advanced_headers: list, advanced_rows: list[list]) -> DataFrame:
+
+        # TODO: (#8) Add dynamic handling for Play-In Games when scraping matches
+        if len(advanced_rows[0]) < 15:
+            for row in advanced_rows:
+                row.append(None)
+
+        basic_df = pd.DataFrame(basic_rows, columns=basic_headers)
+        adv_df = pd.DataFrame(advanced_rows, columns=advanced_headers)
+        return pd.concat([basic_df, adv_df], axis=1)
+
+    @staticmethod
+    def format_headers(headers: list[str]) -> list[str]:
         """
         Helper function to format column headers to fit SQL header convention, not including special cases.
         :param headers: The list of column headers to be formatted.
