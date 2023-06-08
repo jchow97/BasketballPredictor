@@ -515,3 +515,32 @@ class DatabaseService:
         self.session.add(game)
         self.session.flush()
         return game
+
+    def get_season(self, season: int) -> pd.DataFrame:
+        """
+        Retrieves a season's schedule from the database.
+        :param season: NBA Season to retrieve (e.g. 2021-2022 season would be 2022).
+        :return: A dataframe of the NBA season schedule.
+        """
+
+    def get_game(self, game_code: str):
+        """
+        Retrieves a game from the database.
+        :param game_code: Unique game code
+        :return: TODO
+        """
+
+    def get_team(self, team, season):
+        """
+        Retrieves a team for a specific season from the database.
+        :param team: Team name.
+        :param season: year (e.g. 2021-2022 is 2022).
+        :return: TODO
+        """
+
+    def get_player(self, player_code):
+        """
+        Retrieves a player from the database.
+        :param player_code: Unique player code.
+        :return: TODO
+        """
