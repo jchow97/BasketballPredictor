@@ -1,13 +1,18 @@
+from models.nba_match import NbaMatch
+
+
 class NbaSeason:
     """
     NBA Season Object.
     """
 
-    def __init__(self):
+    def __init__(self, season: int):
         """
-        Constructor
+        Constructor for season object used for model training and prediction.
+        :param season: Season year.
         """
-        pass
+        self.__season = season
+        self.__matches = list()
 
     def get_game_schedule(self) -> list[NbaMatch]:
         """
