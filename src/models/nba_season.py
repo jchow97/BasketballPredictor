@@ -11,8 +11,8 @@ class NbaSeason:
         Constructor for season object used for model training and prediction.
         :param season: Season year.
         """
-        self.__season = season
-        self.__matches = list()
+        self.season = season
+        self.matches = list()
 
     def get_game_schedule(self) -> list[NbaMatch]:
         """

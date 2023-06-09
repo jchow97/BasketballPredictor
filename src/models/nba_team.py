@@ -11,10 +11,6 @@ class NbaTeam:
     compared to the basketball-reference data.
     """
     class Node:
-        val = None
-        next = None
-        prev = None
-
         def __init__(self, val='N/A', next=None, prev=None):
             self.val = val
             self.next = next
@@ -27,42 +23,42 @@ class NbaTeam:
         :param season: Year (2021-2022 is 2022).
         """
         # Team Details
-        self.__team_name = team
-        self.__season = season
-        self.__team_abbrv = TEAM_ABBRV[self.__team_name]
+        self.team_name = team
+        self.season = season
+        self.team_abbrv = TEAM_ABBRV[self.team_name]
 
         # Features
-        self.__win_loss_pct = 0.0
-        self.__mov = 0.0
-        self.__off_rtg = 0.0
-        self.__tov_pct = 0.0
-        self.__off_reb = 0.0
-        self.__ts_pct = 0.0
-        self.__def_rtg = 0.0
-        self.__def_reb = 0.0
-        self.__opp_tov_pct = 0.0
-        self.__pace = 0.0
+        self.win_loss_pct = 0.0
+        self.mov = 0.0
+        self.off_rtg = 0.0
+        self.tov_pct = 0.0
+        self.off_reb = 0.0
+        self.ts_pct = 0.0
+        self.def_rtg = 0.0
+        self.def_reb = 0.0
+        self.opp_tov_pct = 0.0
+        self.pace = 0.0
         # + Home Court Advantage
 
         # Supplementary fields
-        self.__wins = 0.0
-        self.__losses = 0.0
-        self.__games = 0.0
+        self.wins = 0.0
+        self.losses = 0.0
+        self.games = 0.0
 
-        self.__mov_total = 0.0
-        self.__off_rtg_total = 0.0
-        self.__tov_pct_total = 0.0
-        self.__off_reb_total = 0.0
-        self.__ts_pct_total = 0.0
-        self.__def_rtg_total = 0.0
-        self.__def_reb_total = 0.0
-        self.__opp_tov_pct_total = 0.0
-        self.__pace_total = 0.0
+        self.mov_total = 0.0
+        self.off_rtg_total = 0.0
+        self.tov_pct_total = 0.0
+        self.off_reb_total = 0.0
+        self.ts_pct_total = 0.0
+        self.def_rtg_total = 0.0
+        self.def_reb_total = 0.0
+        self.opp_tov_pct_total = 0.0
+        self.pace_total = 0.0
 
         # Create last 10 linked list.
         count = 0
-        self.__last10_head = self.Node()
-        curr = self.__last10_head
+        self.last10_head = self.Node()
+        curr = self.last10_head
         prev = None
         while count < 10:
             curr.next = self.Node()
@@ -70,10 +66,10 @@ class NbaTeam:
             curr = curr.next
             curr.prev = prev
             count += 1
-        self.__last10_tail = curr
-        self.__last10_pct = self.calculate_last10()
+        self.last10_tail = curr
+        self.last10_pct = self.calculate_last10()
 
-        self.__features = []
+        self.features = []
 
     def calculate_last10(self) -> float:
         pass
