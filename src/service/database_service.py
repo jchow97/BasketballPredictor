@@ -7,7 +7,10 @@ from common.constants import CURRENT_TEAMS, TEAM_ABBRV
 from models.database import Base, Player, GameType, PlayerStatsType, TeamHomeAwayType, \
     TeamStatsType, Season, Team, TeamStats, TeamAdvancedStats, PlayerStats, Game, GameTeam, GameTeamLog, PlayerTeam, \
     GamePlayerLog
+from models.nba_match import NbaMatch
+from models.nba_player import NbaPlayer
 from models.nba_season import NbaSeason
+from models.nba_team import NbaTeam
 from scripts.Scraper import Scraper
 
 
@@ -524,7 +527,7 @@ class DatabaseService:
         :param seasons:
         :return: A big schedule.
         """
-        # TODO
+        return list()
 
     def get_season(self, season: int) -> NbaSeason:
         """
@@ -532,26 +535,29 @@ class DatabaseService:
         :param season: NBA Season to retrieve (e.g. 2021-2022 season would be 2022).
         :return: A dataframe of the NBA season schedule.
         """
-        # TODO
+        return NbaSeason(0)
 
-    def get_game(self, game_code: str):
+    def get_game(self, game_code: str) -> NbaMatch:
         """
         Retrieves a game from the database.
         :param game_code: Unique game code
         :return: TODO
         """
+        return NbaMatch("stub", NbaTeam('stub', 0), NbaTeam('stub1', 0))
 
-    def get_team(self, team, season):
+    def get_team(self, team: str, season: int) -> NbaTeam:
         """
         Retrieves a team for a specific season from the database.
         :param team: Team name.
         :param season: year (e.g. 2021-2022 is 2022).
         :return: TODO
         """
+        return NbaTeam("stub", 0)
 
-    def get_player(self, player_code):
+    def get_player(self, player_code: str) -> NbaPlayer:
         """
         Retrieves a player from the database.
         :param player_code: Unique player code.
         :return: TODO
         """
+        return NbaPlayer('stub', 'stub')

@@ -69,7 +69,7 @@ class NbaTeam:
         self.last10_tail = curr
         self.last10_pct = self.calculate_last10()
 
-        self.features = []
+        self.features: list[float] = []
 
     def calculate_last10(self) -> float:
         """

@@ -1,6 +1,6 @@
 import numpy as np
-
 from common.constants import CURRENT_TEAMS
+from models.nba_player import NbaPlayer
 from models.nba_season import NbaSeason
 from models.nba_team import NbaTeam
 from sklearn.linear_model import LogisticRegression
@@ -34,7 +34,6 @@ class NbaPredictor:
         Trains the logistic regression model using the specified training years.
         :return: None
         """
-
         training_input_data = []
         training_output_data = []
         input_context = []
@@ -47,24 +46,24 @@ class NbaPredictor:
                 away_team: NbaTeam = self.teams[f"{match.away_team}_{season}"]
                 home_team: NbaTeam = self.teams[f"{match.home_team}_{season}"]
 
-                away_box = match.away_box_score
-                home_box = match.home_box_score
+                # Get average box plus/minus for each team.
+                away_avg_bpm: float = self.calculate_avg_bpm(match.away_box_score)
+                home_avg_bpm: float = self.calculate_avg_bpm(match.home_box_score)
 
-                away_avg_bpm = self.calculate_avg_bpm(away_box)
-                home_avg_bpm = self.calculate_avg_bpm(home_box)
-
+                # Calculate the differential between the average box plus/minus.
                 bpm_diff = home_avg_bpm - away_avg_bpm
-                pre_data = self.generate_input_data(away_team, home_team)
+
+                pre_data: list[float] = self.generate_input_data(away_team, home_team)
                 np.append(pre_data, [self.HOME_COURT_ADV, bpm_diff])
 
-                away_box_total = away_box.iloc[-1]
+                # Calculate the point differential for each team.
+                away_box_total = match.away_box_score.iloc[-1]
                 away_pts = away_box_total["PTS"]
-
-                home_box_total = home_box.iloc[-1]
+                home_box_total = match.home_box_score.iloc[-1]
                 home_pts = home_box_total["PTS"]
-
                 game_pt_diff = float(away_pts) - float(home_pts)  # Done this way to better reflect spreads.
 
+                # Finalize return data.
                 training_input_data.append(pre_data)
                 training_output_data.append(game_pt_diff)
                 # context/row identifiers [away, home]
@@ -74,9 +73,9 @@ class NbaPredictor:
 
                 # Update team objects with new match data.
                 print(f"Updating away team ({away_team}) features.")
-                away_team.update_team_stats(away_box, home_box, match.game_summary)
+                away_team.update_team_stats(match.away_box_score, match.home_box_score, match.game_summary)
                 print(f"Updating home team ({home_team}) features.")
-                home_team.update_team_stats(home_box, away_box, match.game_summary)
+                home_team.update_team_stats(match.home_box_score, match.away_box_score, match.game_summary)
 
         return training_input_data, training_output_data, input_context
 
@@ -102,8 +101,15 @@ class NbaPredictor:
 
     @staticmethod
     def generate_input_data(away: NbaTeam, home: NbaTeam) -> list[float]:
-        away_f = away.features
-        home_f = home.features
+        """
+        Generate the differential between the features of the home team.
+        :param away: Away team object.
+        :param home: Home team object.
+        :return: List of differences for each feature.
+        """
+
+        away_f: list[float] = away.features
+        home_f: list[float] = home.features
 
         input_data = np.subtract(home_f, away_f)
         return input_data
@@ -123,15 +129,15 @@ class NbaPredictor:
                 print(f'{team_name} created.')
         return teams
 
-    def calculate_avg_bpm(self, box_score):
+    def calculate_avg_bpm(self, box_score) -> float:
         pre_bpm_sum = 0.0
         count = 0
 
         for i in box_score.index[:-1]:  # -1 to exclude team totals.
             player_name = box_score['Players'][i]
             print(f"Fetching {player_name}'s BPM.")
-            player_code = self.db.scraper.get_player_code(player_name)
-            player = self.db.get_player(player_code)
+            player_code: str = self.db.scraper.get_player_code(player_name)
+            player: NbaPlayer = self.db.get_player(player_code)
             pre_bpm_sum += float(player.bpm)
             count += 1
 
