@@ -1,4 +1,5 @@
 from datetime import datetime
+import numpy as np
 import pandas as pd
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
@@ -6,6 +7,7 @@ from common.constants import CURRENT_TEAMS, TEAM_ABBRV
 from models.database import Base, Player, GameType, PlayerStatsType, TeamHomeAwayType, \
     TeamStatsType, Season, Team, TeamStats, TeamAdvancedStats, PlayerStats, Game, GameTeam, GameTeamLog, PlayerTeam, \
     GamePlayerLog
+from models.nba_season import NbaSeason
 from scripts.Scraper import Scraper
 
 
@@ -516,12 +518,21 @@ class DatabaseService:
         self.session.flush()
         return game
 
-    def get_season(self, season: int) -> pd.DataFrame:
+    def get_seasons(self, seasons: list[int]) -> list[NbaSeason]:
+        """
+        Combines various season schedules from the database and returns as one giant schedule, ordered by game time.
+        :param seasons:
+        :return: A big schedule.
+        """
+        # TODO
+
+    def get_season(self, season: int) -> NbaSeason:
         """
         Retrieves a season's schedule from the database.
         :param season: NBA Season to retrieve (e.g. 2021-2022 season would be 2022).
         :return: A dataframe of the NBA season schedule.
         """
+        # TODO
 
     def get_game(self, game_code: str):
         """

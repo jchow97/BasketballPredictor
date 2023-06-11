@@ -12,7 +12,7 @@ class NbaSeason:
         :param season: Season year.
         """
         self.season = season
-        self.matches = list()
+        self.matches: list[NbaMatch] = self.get_game_schedule()
 
     def get_game_schedule(self) -> list[NbaMatch]:
         """

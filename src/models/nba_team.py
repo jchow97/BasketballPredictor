@@ -72,4 +72,27 @@ class NbaTeam:
         self.features = []
 
     def calculate_last10(self) -> float:
+        """
+        Calculates and returns the win/loss percentage of the last 10 games played.
+        :return: float of win/loss% of the last 10 games.
+        """
         pass
+
+    def calculate_win_loss_pct(self) -> float:
+        """
+        Calculates win pct based on the current wins and losses.
+        :return: float of the win/loss percentage of the team.
+        """
+        pass
+
+    def update_team_stats(self, team_box_score, opponent_box_score, game_summary) -> None:
+        """
+        Updates all features and fields for the team after a game.
+        :param team_box_score: Dataframe of basic and advanced box score for the team.
+        :param opponent_box_score: Dataframe of basic and advanced box score for the opposing team.
+        :param game_summary: Game summary dataframe.
+        :return: None
+        """
+
+        pass
+

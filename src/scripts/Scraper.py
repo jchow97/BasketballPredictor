@@ -323,6 +323,14 @@ class Scraper:
         return game_code
 
     @staticmethod
+    def get_player_code(name: str) -> str:
+        """
+        Gets the basketball-reference player-code based on the player's name and TODO.
+        :param name: Player Name
+        :return: Unique player code string.
+        """
+
+    @staticmethod
     def __parse_box_scores(basic_table, adv_table) -> tuple[list[list], list[list]]:
         """
         Parse table data for team basic and advanced box scores.
