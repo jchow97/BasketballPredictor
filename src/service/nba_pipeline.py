@@ -1,4 +1,6 @@
 import numpy as np
+import pandas as pd
+
 from common.constants import CURRENT_TEAMS
 from models.nba_player import NbaPlayer
 from models.nba_season import NbaSeason
@@ -115,7 +117,7 @@ class NbaPredictor:
         return input_data
 
     @staticmethod
-    def create_teams(years) -> dict:
+    def create_teams(years: list[int]) -> dict:
         """
         Creates a dictionary of all current teams, for each year.
         :param years: Seasons to create teams for.
@@ -129,7 +131,12 @@ class NbaPredictor:
                 print(f'{team_name} created.')
         return teams
 
-    def calculate_avg_bpm(self, box_score) -> float:
+    def calculate_avg_bpm(self, box_score: pd.DataFrame) -> float:
+        """
+        Calculates the average box plus/minus for the team's box score.
+        :param box_score: Dataframe of the team's box score.
+        :return: float of the average box plus/minus.
+        """
         pre_bpm_sum = 0.0
         count = 0
 

@@ -1,3 +1,5 @@
+import pandas as pd
+
 from common.constants import TEAM_ABBRV
 
 
@@ -16,7 +18,7 @@ class NbaTeam:
             self.next = next
             self.prev = prev
 
-    def __init__(self, team: str, season:int):
+    def __init__(self, team: str, season: int):
         """
         Constructor for team object used for model training and prediction.
         :param team: Team name.
@@ -85,7 +87,8 @@ class NbaTeam:
         """
         pass
 
-    def update_team_stats(self, team_box_score, opponent_box_score, game_summary) -> None:
+    def update_team_stats(self, team_box_score: pd.DataFrame, opponent_box_score: pd.DataFrame,
+                          game_summary: pd.DataFrame) -> None:
         """
         Updates all features and fields for the team after a game.
         :param team_box_score: Dataframe of basic and advanced box score for the team.
