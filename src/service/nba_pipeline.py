@@ -29,7 +29,7 @@ class NbaPredictor:
 
         self.db = database_service
 
-    def train_model(self) -> None:
+    def train_model(self) -> tuple[list[list[float]], list[float], list[list[NbaTeam]]]:
         """
         Trains the logistic regression model using the specified training years.
         :return: None
@@ -38,7 +38,6 @@ class NbaPredictor:
         training_input_data = []
         training_output_data = []
         input_context = []
-
 
         seasons: list[NbaSeason] = self.db.get_seasons(self.training_seasons)
 
@@ -78,6 +77,8 @@ class NbaPredictor:
                 away_team.update_team_stats(away_box, home_box, match.game_summary)
                 print(f"Updating home team ({home_team}) features.")
                 home_team.update_team_stats(home_box, away_box, match.game_summary)
+
+        return training_input_data, training_output_data, input_context
 
     def run_prediction(self, year: int):
         """
