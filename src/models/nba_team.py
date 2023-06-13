@@ -1,6 +1,7 @@
 import pandas as pd
 
 from common.constants import TEAM_ABBRV
+from models.database import Team
 
 
 class NbaTeam:
@@ -97,5 +98,13 @@ class NbaTeam:
         :return: None
         """
 
+        pass
+
+    def update_features(self, database_team: Team):
+        """
+        Updates the feature properties using database Team object's properties. Useful for data persistence.
+        :param database_team:
+        :return:
+        """
         pass
 
