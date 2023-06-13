@@ -25,9 +25,9 @@ class NbaPlayer:
         :param box_score:
         :return: None.
         """
-        self.__games_played += 1
-        print(self.__player_name)
-        bpm = box_score.loc[box_score['Players'] == self.__player_name]['BPM']
+        self.games_played += 1
+        print(self.player_name)
+        bpm = box_score.loc[box_score['Players'] == self.player_name]['BPM']
         if bpm.any():
-            self.__bpm_total += float(bpm)
-            self.__bpm = self.__bpm_total / self.__games_played
+            self.bpm_total += float(bpm)
+            self.bpm = self.bpm_total / self.games_played

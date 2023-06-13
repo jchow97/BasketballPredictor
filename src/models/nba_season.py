@@ -19,4 +19,3 @@ class NbaSeason:
         Iterates through an NBA season schedule to get a list of games.
         :return:
         """
-
