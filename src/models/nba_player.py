@@ -13,7 +13,7 @@ class NbaPlayer:
         :param player_code: Unique player code that identifies a player.
         """
         self.player_name = name
-        self.player_code: player_code
+        self.player_code = player_code
 
         self.games_played = 0.0
         self.bpm = 0.0

@@ -1,5 +1,4 @@
 from datetime import datetime
-import numpy as np
 import pandas as pd
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
@@ -527,15 +526,28 @@ class DatabaseService:
         :param seasons:
         :return: A big schedule.
         """
-        return list()
+        result: list[NbaSeason] = []
 
-    def get_season(self, season: int) -> NbaSeason:
+        for season in seasons:
+            result.append(self.get_season(season))
+
+        return result
+
+    def get_season(self, year: int) -> NbaSeason:
         """
         Retrieves a season's schedule from the database.
-        :param season: NBA Season to retrieve (e.g. 2021-2022 season would be 2022).
+        :param year: NBA Season to retrieve (e.g. 2021-2022 season would be 2022).
         :return: A dataframe of the NBA season schedule.
         """
-        return NbaSeason(0)
+        season = self.session.query(Season).where(Season.year == str(year)).one_or_none()
+
+        if season is None:
+            pass
+
+        # TODO: Create match objects from schedule and assign to NbaSeason.matches.
+        # matches = self.session.query(Game).where(Game.season_id == season_query.Season.id).all()
+
+        return NbaSeason(int(season.year))
 
     def get_game(self, game_code: str) -> NbaMatch:
         """
@@ -543,21 +555,54 @@ class DatabaseService:
         :param game_code: Unique game code
         :return: TODO
         """
-        return NbaMatch("stub", NbaTeam('stub', 0), NbaTeam('stub1', 0))
+        query = self.session\
+            .query(Game, GameTeam, GameTeamLog, Team)\
+            .where(Game.game_code == game_code)\
+            .where(GameTeam.game_id == Game.id)\
+            .where(GameTeamLog.game_team_id == GameTeam.id)\
+            .where(Team.id == GameTeam.team_id)\
+            .all()
+
+        if query is None:
+            pass
+
+        return NbaMatch(query[0].Game.game_code, query[0].Team.name, query[1].Team.name)
 
     def get_team(self, team: str, season: int) -> NbaTeam:
         """
-        Retrieves a team for a specific season from the database.
+        Retrieves a team for a specific season from the database with their statistics.
         :param team: Team name.
         :param season: year (e.g. 2021-2022 is 2022).
-        :return: TODO
+        :return: NbaTeam object
         """
-        return NbaTeam("stub", 0)
+        query = self.session\
+            .query(Team, Season)\
+            .where(Season.id == Team.season_id)\
+            .where(Team.name == team)\
+            .where(Season.year == str(season))\
+            .one_or_none()
+
+        if query is None:
+            # TODO: Handle none case.
+            pass
+
+        team = NbaTeam(query.Team.name, query.Season.year)
+        team.update_features(query.Team)
+
+        return team
 
     def get_player(self, player_code: str) -> NbaPlayer:
         """
-        Retrieves a player from the database.
+        Retrieves a player from the database with their most recently-played season stats (this may change).
         :param player_code: Unique player code.
-        :return: TODO
+        :return: NbaPlayer object
         """
-        return NbaPlayer('stub', 'stub')
+        query = self.session\
+            .query(Player, PlayerStats)\
+            .where(Player.id == PlayerStats.player_id)\
+            .where(Player.unique_code == player_code)\
+            .order_by(PlayerStats.season.desc())\
+            .first()
+
+        player = NbaPlayer(query.Player.friendly_name, query.Player.unique_code)
+        return player
