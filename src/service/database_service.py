@@ -553,7 +553,7 @@ class DatabaseService:
         """
         Retrieves a game from the database.
         :param game_code: Unique game code
-        :return: TODO
+        :return: NbaMatch object.
         """
         query = self.session\
             .query(Game, GameTeam, GameTeamLog, Team)\
@@ -576,10 +576,12 @@ class DatabaseService:
         :return: NbaTeam object
         """
         query = self.session\
-            .query(Team, Season)\
+            .query(Team, Season, TeamStats, TeamAdvancedStats)\
             .where(Season.id == Team.season_id)\
             .where(Team.name == team)\
             .where(Season.year == str(season))\
+            .where(TeamStats.team_id == Team.id)\
+            .where(TeamAdvancedStats.team_id == Team.id)\
             .one_or_none()
 
         if query is None:
@@ -587,7 +589,7 @@ class DatabaseService:
             pass
 
         team = NbaTeam(query.Team.name, query.Season.year)
-        team.update_features(query.Team)
+        team.update_features_from_database(query.Team, query.TeamStats, query.TeamAdvancedStats)
 
         return team
 
@@ -606,3 +608,6 @@ class DatabaseService:
 
         player = NbaPlayer(query.Player.friendly_name, query.Player.unique_code)
         return player
+
+    def get_last10_games(self, team: str, season: int):
+        raise NotImplementedError()
