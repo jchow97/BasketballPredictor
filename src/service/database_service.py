@@ -1,5 +1,4 @@
 from datetime import datetime
-import numpy as np
 import pandas as pd
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
@@ -527,7 +526,12 @@ class DatabaseService:
         :param seasons:
         :return: A big schedule.
         """
-        return list()
+        result: list[NbaSeason] = []
+
+        for season in seasons:
+            result.append(self.get_season(season))
+
+        return result
 
     def get_season(self, year: int) -> NbaSeason:
         """
@@ -563,7 +567,6 @@ class DatabaseService:
             pass
 
         return NbaMatch(query[0].Game.game_code, query[0].Team.name, query[1].Team.name)
-
 
     def get_team(self, team: str, season: int) -> NbaTeam:
         """
