@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 
 from common.constants import CURRENT_TEAMS
+from models.database import *
 from models.nba_player import NbaPlayer
 from models.nba_season import NbaSeason
 from models.nba_team import NbaTeam
@@ -40,11 +41,24 @@ class NbaPredictor:
         training_output_data = []
         input_context = []
 
-        seasons: list[NbaSeason] = self.db.get_seasons(self.training_seasons)
+        # Query for seasons.
+        seasons: list[Season] = self.db.get_seasons(self.training_seasons)
 
-        # For each season, iterate through each match in the schedule.
+        # Create season and match objects.
+        # Note: Not going to query all team and player stats at once. Just enough to create the match objects.
+        #       If I included player, the query would be ~60k rows. Right now with just team logs, it's ~2500 I think.
+        for season in seasons:
+            matches: list[tuple[Game, GameTeam, GameTeamLog, Team]] = self.db.get_games_by_season_id(season.id)
+
+            for i in range(0, len(matches), 2):
+                home_team: NbaTeam = self.teams[matches[i].Team.friendly_name]
+                away_team: NbaTeam = self.teams[matches[i+1].Team.friendly_name]
+
+
+
         for season in seasons:
             for match in season.matches:
+
                 away_team: NbaTeam = self.teams[f"{match.away_team}_{season}"]
                 home_team: NbaTeam = self.teams[f"{match.home_team}_{season}"]
 
