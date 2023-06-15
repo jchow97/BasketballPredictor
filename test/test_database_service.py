@@ -32,11 +32,14 @@ class TestDatabaseService(unittest.TestCase):
         test_season = self.database_service.get_season(2022)
         self.assertEqual(test_season.season, 2022)
 
+    def test_get_games_by_season_id(self):
+        test_matches = self.database_service.get_games_by_season_id(1)
+
     def test_get_game(self):
         test_game_code = '202110190MIL'
         test_home_team = 'Milwaukee Bucks'
         test_away_team = 'Brooklyn Nets'
-        test_match = self.database_service.get_game(test_game_code)
+        test_match = self.database_service.get_game_by_game_code(test_game_code)
         self.assertEqual(test_match.game_code, test_game_code)
         self.assertEqual(test_match.home_team, test_home_team)
         self.assertEqual(test_match.away_team, test_away_team)

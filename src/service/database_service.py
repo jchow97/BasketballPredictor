@@ -1,6 +1,6 @@
 from datetime import datetime
 import pandas as pd
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, func
 from sqlalchemy.orm import Session
 from common.constants import CURRENT_TEAMS, TEAM_ABBRV
 from models.database import Base, Player, GameType, PlayerStatsType, TeamHomeAwayType, \
@@ -520,7 +520,7 @@ class DatabaseService:
         """
         Combines various season schedules from the database and returns as one giant schedule, ordered by game time.
         :param seasons:
-        :return: A big schedule.
+        :return: A list of Season ORM Objects.
         """
         result: list[Season] = []
 
@@ -539,21 +539,22 @@ class DatabaseService:
 
         return season
 
-    # def __get_games_by_season_id(self, sid: int) -> list:
-    #     """
-    #     Gets regular season games by season id.
-    #     :param sid: Season id
-    #     :return:
-    #     """
-    #     matches = self.session \
-    #         .query(Game, GameTeam, GameTeamLog, Team) \
-    #         .where(Game.season_id == sid) \
-    #         .where(GameTeam.game_id == Game.id) \
-    #         .where(GameTeamLog.game_team_id == GameTeam.id) \
-    #         .where(Team.id == GameTeam.team_id) \
-    #         .all()
-    #
-    #     schedule = []
+    def get_games_by_season_id(self, sid: int) -> list[tuple[Game, GameTeam, GameTeamLog, Team]]:
+        """
+        Gets regular season games by season id.
+        :param sid: Season id
+        :return:
+        """
+        matches = self.session \
+            .query(Game, GameTeam, GameTeamLog, Team) \
+            .where(Game.season_id == sid) \
+            .where(GameTeam.game_id == Game.id) \
+            .where(GameTeamLog.game_team_id == GameTeam.id) \
+            .where(Team.id == GameTeam.team_id) \
+            .order_by(Game.start_datetime, GameTeam.team_home_away_type)\
+            .all()
+
+        return matches
 
     def get_game_by_game_code(self, game_code: str) -> tuple[tuple[Game, GameTeam, GameTeamLog],
     tuple[Game, GameTeam, GameTeamLog]]:
@@ -611,6 +612,15 @@ class DatabaseService:
             .first()
 
         return query.Player, query.PlayerStats
+
+    def get_player_log_bpm_only_by_game_team_id(self, gtid: int):
+        """
+        For a GameTeam, get sum of all player's BPM for the game.
+        :param gtid: GameTeam id.
+        :return: GamePlayerLog object.
+        """
+        query = self.session.query(func.sum(GamePlayerLog.box_plus_minus))\
+            .where(GamePlayerLog.game_team_id == gtid)\
 
     def get_last10_games(self, team: str, season: int):
         raise NotImplementedError()
