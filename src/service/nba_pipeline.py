@@ -3,6 +3,7 @@ import pandas as pd
 
 from common.constants import CURRENT_TEAMS
 from models.database import *
+from models.nba_match import NbaMatch
 from models.nba_player import NbaPlayer
 from models.nba_season import NbaSeason
 from models.nba_team import NbaTeam
@@ -45,14 +46,36 @@ class NbaPredictor:
         seasons: list[Season] = self.db.get_seasons(self.training_seasons)
 
         # Create season and match objects.
-        # Note: Not going to query all team and player stats at once. Just enough to create the match objects.
-        #       If I included player, the query would be ~60k rows. Right now with just team logs, it's ~2500 I think.
+        """
+        Pseudocode:
+        For each season:
+            - Query for game, and related teams + team logs. (1 query, 2.5k rows)
+            - Create match objects.
+            - For each match:
+                Query for player logs (2 queries, 1 for each team per match)
+                
+        """
         for season in seasons:
             matches: list[tuple[Game, GameTeam, GameTeamLog, Team]] = self.db.get_games_by_season_id(season.id)
 
+            schedule: list[NbaMatch] = []
             for i in range(0, len(matches), 2):
-                home_team: NbaTeam = self.teams[matches[i].Team.friendly_name]
-                away_team: NbaTeam = self.teams[matches[i+1].Team.friendly_name]
+
+                home_game_obj, home_game_team_obj, home_game_team_log_obj, home_team_obj = matches[i]
+                away_game_obj, away_game_team_obj, away_game_team_log_obj, away_team_obj = matches[i+1]
+
+                if home_game_obj.game_code != away_game_obj.game_code:
+                    raise ValueError("Game codes do not match")
+
+                home_team: NbaTeam = self.teams[home_team_obj.friendly_name]
+                away_team: NbaTeam = self.teams[away_team_obj.friendly_name]
+
+                new_match: NbaMatch = NbaMatch(home_game_obj.game_code, home_team, away_team)
+                schedule.append(new_match)
+
+            nba_season = NbaSeason(int(season.year), schedule)
+
+
 
 
 
