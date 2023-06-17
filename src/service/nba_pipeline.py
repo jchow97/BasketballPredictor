@@ -62,9 +62,9 @@ class NbaPredictor:
             for i in range(0, len(matches), 2):
 
                 home_game_object, home_game_team_object, home_game_team_log_object, home_team_object = matches[i]
-                home_players_bpm: int = self.db.get_player_log_scaled_bpm_avg_by_game_team_id(home_game_team_object.id)
+                home_players_bpm: int = self.db.get_player_log_bpm_avg_by_game_team_id(home_game_team_object.id)
                 away_game_object, away_game_team_object, away_game_team_log_object, away_team_object = matches[i+1]
-                away_players_bpm: int = self.db.get_player_log_scaled_bpm_avg_by_game_team_id(away_game_team_object.id)
+                away_players_bpm: int = self.db.get_player_log_bpm_avg_by_game_team_id(away_game_team_object.id)
 
                 if home_game_object.game_code != away_game_object.game_code:
                     raise ValueError("Game codes do not match")
