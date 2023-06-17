@@ -12,11 +12,4 @@ class NbaSeason:
         :param season: Season year.
         """
         self.season = season
-        self.matches: list = self.get_game_schedule()
-
-    def get_game_schedule(self, matches) -> list[NbaMatch]:
-        """
-        Iterates through an NBA season schedule to get a list of games.
-        :return:
-        """
-        raise NotImplementedError
+        self.matches: list = schedule

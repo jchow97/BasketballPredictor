@@ -61,24 +61,27 @@ class NbaPredictor:
             schedule: list[NbaMatch] = []
             for i in range(0, len(matches), 2):
 
-                home_game_obj, home_game_team_obj, home_game_team_log_obj, home_team_obj = matches[i]
-                away_game_obj, away_game_team_obj, away_game_team_log_obj, away_team_obj = matches[i+1]
+                home_game_object, home_game_team_object, home_game_team_log_object, home_team_object = matches[i]
+                home_players_bpm: int = self.db.get_player_log_scaled_bpm_avg_by_game_team_id(home_game_team_object.id)
+                away_game_object, away_game_team_object, away_game_team_log_object, away_team_object = matches[i+1]
+                away_players_bpm: int = self.db.get_player_log_scaled_bpm_avg_by_game_team_id(away_game_team_object.id)
 
-                if home_game_obj.game_code != away_game_obj.game_code:
+                if home_game_object.game_code != away_game_object.game_code:
                     raise ValueError("Game codes do not match")
 
-                home_team: NbaTeam = self.teams[home_team_obj.friendly_name]
-                away_team: NbaTeam = self.teams[away_team_obj.friendly_name]
+                home_team: NbaTeam = self.teams[home_team_object.friendly_name]
+                away_team: NbaTeam = self.teams[away_team_object.friendly_name]
 
-                new_match: NbaMatch = NbaMatch(home_game_obj.game_code, home_team, away_team)
+                new_match: NbaMatch = NbaMatch(home_game_object.game_code, home_team, away_team)
+                new_match.add_team_logs(home_game_team_log_object, away_game_team_log_object,
+                                        home_players_bpm, away_players_bpm)
+
+
                 schedule.append(new_match)
 
-            nba_season = NbaSeason(int(season.year), schedule)
+            # new_season = NbaSeason(int(season.year), schedule)
 
-
-
-
-
+        # TODO: Delete
         for season in seasons:
             for match in season.matches:
 

@@ -613,14 +613,25 @@ class DatabaseService:
 
         return query.Player, query.PlayerStats
 
-    def get_player_log_bpm_only_by_game_team_id(self, gtid: int):
+    def get_player_log_bpm_avg_by_game_team_id(self, gtid: int) -> int:
         """
-        For a GameTeam, get sum of all player's BPM for the game.
+        For a GameTeam, get BPM average of the team's players, not including DNP players.
+
         :param gtid: GameTeam id.
-        :return: GamePlayerLog object.
+        :return: Average BPM integer.
         """
-        query = self.session.query(func.sum(GamePlayerLog.box_plus_minus))\
-            .where(GamePlayerLog.game_team_id == gtid)\
+
+        """
+        Pseudocode:
+        1. Get all player rows.
+        2. Filter out DNPs.
+        3. Count and sum BPMs.
+        4. Calculate average.
+        """
+        # query = self.session.query(func.sum(GamePlayerLog.box_plus_minus))\
+        #     .where(GamePlayerLog.game_team_id == gtid)\
+        # return query
+        raise NotImplementedError
 
     def get_last10_games(self, team: str, season: int):
         raise NotImplementedError()
