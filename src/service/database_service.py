@@ -613,12 +613,12 @@ class DatabaseService:
 
         return query.Player, query.PlayerStats
 
-    def get_player_log_bpm_avg_by_game_team_id(self, gtid: int) -> int:
+    def get_player_log_bpm_avg_by_game_team_id(self, gtid: int) -> float:
         """
         For a GameTeam, get BPM average of the team's players, not including DNP players.
 
         :param gtid: GameTeam id.
-        :return: Average BPM integer.
+        :return: Average BPM float.
         """
 
         """
