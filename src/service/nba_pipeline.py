@@ -48,6 +48,19 @@ class NbaPredictor:
         self.pipeline.fit(training_input_data, training_output_data)
 
     def generate_training_data(self):
+        """
+        Pseudocode:
+            1. Loop through each season's schedule.
+            2. For each game:
+                a. Get pre-game features' values from Team and Player objects (inputs).
+                b. Get Game + Box Scores from database:
+                    For each game, query for Game.
+                a. calculate the pre-game features' values (inputs).
+                    -> For each player that played: Get their season BPM value.
+                b. calculate the point differential between teams (outcome).
+                c. Use actual team and player box scores to update team features and player BPM values.
+        :return:
+        """
         raise NotImplementedError()
 
     def run_prediction(self, year: int):
