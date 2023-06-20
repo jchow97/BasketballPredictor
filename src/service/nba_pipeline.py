@@ -3,7 +3,6 @@ import pandas as pd
 
 from common.constants import CURRENT_TEAMS
 from models.nba_player import NbaPlayer
-from models.nba_season import NbaSeason
 from models.nba_team import NbaTeam
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
@@ -31,55 +30,25 @@ class NbaPredictor:
 
         self.db = database_service
 
-    def train_model(self) -> tuple[list[list[float]], list[float], list[list[NbaTeam]]]:
+    def train_model(self):
         """
         Trains the logistic regression model using the specified training years.
-        :return: None
+        :return: TODO (not sure what `pipeline.fit` returns.).
         """
-        training_input_data = []
-        training_output_data = []
-        input_context = []
 
-        seasons: list[NbaSeason] = self.db.get_seasons(self.training_seasons)
+        """
+        Pseudocode: How model training works.
+            1. 2d array of input (features) -> actual outcome
+                [features] -> pt_differential (home - away)
+            2. run pipeline.fit(training_input_data, training_output_data)
+            
+        """
+        training_input_data, training_output_data = self.generate_training_data()
+        # Train model
+        self.pipeline.fit(training_input_data, training_output_data)
 
-        # For each season, iterate through each match in the schedule.
-        for season in seasons:
-            for match in season.matches:
-                away_team: NbaTeam = self.teams[f"{match.away_team}_{season}"]
-                home_team: NbaTeam = self.teams[f"{match.home_team}_{season}"]
-
-                # Get average box plus/minus for each team.
-                away_avg_bpm: float = self.calculate_avg_bpm(match.away_box_score)
-                home_avg_bpm: float = self.calculate_avg_bpm(match.home_box_score)
-
-                # Calculate the differential between the average box plus/minus.
-                bpm_diff = home_avg_bpm - away_avg_bpm
-
-                pre_data: list[float] = self.generate_input_data(away_team, home_team)
-                np.append(pre_data, [self.HOME_COURT_ADV, bpm_diff])
-
-                # Calculate the point differential for each team.
-                away_box_total = match.away_box_score.iloc[-1]
-                away_pts = away_box_total["PTS"]
-                home_box_total = match.home_box_score.iloc[-1]
-                home_pts = home_box_total["PTS"]
-                game_pt_diff = float(away_pts) - float(home_pts)  # Done this way to better reflect spreads.
-
-                # Finalize return data.
-                training_input_data.append(pre_data)
-                training_output_data.append(game_pt_diff)
-                # context/row identifiers [away, home]
-                input_context.append([away_team, home_team])
-
-                print(f'{match.game_code} input and output data added.')
-
-                # Update team objects with new match data.
-                print(f"Updating away team ({away_team}) features.")
-                away_team.update_team_stats(match.away_box_score, match.home_box_score, match.game_summary)
-                print(f"Updating home team ({home_team}) features.")
-                home_team.update_team_stats(match.home_box_score, match.away_box_score, match.game_summary)
-
-        return training_input_data, training_output_data, input_context
+    def generate_training_data(self):
+        raise NotImplementedError()
 
     def run_prediction(self, year: int):
         """
@@ -102,7 +71,7 @@ class NbaPredictor:
         """
 
     @staticmethod
-    def generate_input_data(away: NbaTeam, home: NbaTeam) -> list[float]:
+    def generate_features_differential(away: NbaTeam, home: NbaTeam) -> list[float]:
         """
         Generate the differential between the features of the home team.
         :param away: Away team object.
