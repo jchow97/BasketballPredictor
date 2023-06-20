@@ -190,7 +190,7 @@ class Scraper:
                           If specified, overrides specified season.
         :return: Collection of 3 dataframes.
         """
-        pass
+        raise NotImplementedError()
 
     def scrape_nba_player(self, player_code, url=None) -> pd.DataFrame or None:
         """

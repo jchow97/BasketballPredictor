@@ -542,7 +542,7 @@ class DatabaseService:
         season = self.session.query(Season).where(Season.year == str(year)).one_or_none()
 
         if season is None:
-            pass
+            raise NotImplementedError()
 
         # TODO: Create match objects from schedule and assign to NbaSeason.matches.
         # matches = self.session.query(Game).where(Game.season_id == season_query.Season.id).all()
@@ -564,7 +564,7 @@ class DatabaseService:
             .all()
 
         if query is None:
-            pass
+            raise NotImplementedError()
 
         return NbaMatch(query[0].Game.game_code, query[0].Team.name, query[1].Team.name)
 
@@ -584,7 +584,7 @@ class DatabaseService:
 
         if query is None:
             # TODO: Handle none case.
-            pass
+            raise NotImplementedError()
 
         team = NbaTeam(query.Team.name, query.Season.year)
         team.update_features(query.Team)

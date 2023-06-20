@@ -56,12 +56,14 @@ class NbaPredictor:
         :param year: Season year (2021-2022 is 2022).
         :return:
         """
+        raise NotImplementedError()
 
     def check_prediction(self):
         """
         Checks prediction against odds data for prediction accuracy.
         :return: Prediction accuracy
         """
+        raise NotImplementedError()
 
     def process_odds_data(self, year: int):
         """
@@ -69,6 +71,7 @@ class NbaPredictor:
         :param year: Season year (2021-2022 is 2022).
         :return: A dataframe of the odds data for use.
         """
+        raise NotImplementedError()
 
     @staticmethod
     def generate_features_differential(away: NbaTeam, home: NbaTeam) -> list[float]:
