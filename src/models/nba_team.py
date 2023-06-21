@@ -79,14 +79,14 @@ class NbaTeam:
         Calculates and returns the win/loss percentage of the last 10 games played.
         :return: float of win/loss% of the last 10 games.
         """
-        pass
+        raise NotImplementedError()
 
     def calculate_win_loss_pct(self) -> float:
         """
         Calculates win pct based on the current wins and losses.
         :return: float of the win/loss percentage of the team.
         """
-        pass
+        raise NotImplementedError()
 
     def update_team_stats(self, team_box_score: pd.DataFrame, opponent_box_score: pd.DataFrame,
                           game_summary: pd.DataFrame) -> None:
@@ -98,7 +98,7 @@ class NbaTeam:
         :return: None
         """
 
-        pass
+        raise NotImplementedError()
 
     def update_features(self, database_team: Team):
         """
@@ -106,4 +106,4 @@ class NbaTeam:
         :param database_team:
         :return:
         """
-        pass
+        raise NotImplementedError()

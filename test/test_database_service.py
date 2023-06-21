@@ -29,20 +29,20 @@ class TestDatabaseService(unittest.TestCase):
         self.database_service = DatabaseService(session, scraper)
 
     def test_get_season(self):
-        test_season = self.database_service.get_season(2022)
+        test_season = self.database_service.get_schedule_by_year(2022)
         self.assertEqual(test_season.season, 2022)
 
     def test_get_game(self):
         test_game_code = '202110190MIL'
         test_home_team = 'Milwaukee Bucks'
         test_away_team = 'Brooklyn Nets'
-        test_match = self.database_service.get_game(test_game_code)
+        test_match = self.database_service.get_game_by_game_code(test_game_code)
         self.assertEqual(test_match.game_code, test_game_code)
         self.assertEqual(test_match.home_team, test_home_team)
         self.assertEqual(test_match.away_team, test_away_team)
 
     def test_get_team(self):
-        test_team = self.database_service.get_team('Portland Trail Blazers', 2022)
+        test_team = self.database_service.get_team_by_name_and_season('Portland Trail Blazers', 2022)
         self.assertEqual(test_team.team_name, 'Portland Trail Blazers')
         self.assertEqual(test_team.team_abbrv, 'POR')
 

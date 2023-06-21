@@ -6,10 +6,6 @@ from common.constants import CURRENT_TEAMS, TEAM_ABBRV
 from models.database import Base, Player, GameType, PlayerStatsType, TeamHomeAwayType, \
     TeamStatsType, Season, Team, TeamStats, TeamAdvancedStats, PlayerStats, Game, GameTeam, GameTeamLog, PlayerTeam, \
     GamePlayerLog
-from models.nba_match import NbaMatch
-from models.nba_player import NbaPlayer
-from models.nba_season import NbaSeason
-from models.nba_team import NbaTeam
 from scripts.Scraper import Scraper
 
 
@@ -520,36 +516,28 @@ class DatabaseService:
         self.session.flush()
         return game
 
-    def get_seasons(self, seasons: list[int]) -> list[NbaSeason]:
+    def get_seasons_by_years(self, seasons: list[int]) -> list[Season]:
         """
         Combines various season schedules from the database and returns as one giant schedule, ordered by game time.
         :param seasons:
         :return: A big schedule.
         """
-        result: list[NbaSeason] = []
+        result: list[Game] = []
 
         for season in seasons:
-            result.append(self.get_season(season))
+            result.extend(self.get_schedule_by_year(season))
 
         return result
 
-    def get_season(self, year: int) -> NbaSeason:
+    def get_schedule_by_year(self, year: int) -> list[Game]:
         """
         Retrieves a season's schedule from the database.
         :param year: NBA Season to retrieve (e.g. 2021-2022 season would be 2022).
         :return: A dataframe of the NBA season schedule.
         """
-        season = self.session.query(Season).where(Season.year == str(year)).one_or_none()
+        raise NotImplementedError
 
-        if season is None:
-            pass
-
-        # TODO: Create match objects from schedule and assign to NbaSeason.matches.
-        # matches = self.session.query(Game).where(Game.season_id == season_query.Season.id).all()
-
-        return NbaSeason(int(season.year))
-
-    def get_game(self, game_code: str) -> NbaMatch:
+    def get_game_by_game_code(self, game_code: str) -> Game:
         """
         Retrieves a game from the database.
         :param game_code: Unique game code
@@ -564,34 +552,33 @@ class DatabaseService:
             .all()
 
         if query is None:
-            pass
+            raise NotImplementedError()
 
-        return NbaMatch(query[0].Game.game_code, query[0].Team.name, query[1].Team.name)
+        return query
 
-    def get_team(self, team: str, season: int) -> NbaTeam:
+    def get_team_by_name_and_season_id(self, team: str, season_id: int) -> Team:
         """
         Retrieves a team for a specific season from the database with their statistics.
+        :param season_id: Season id
         :param team: Team name.
-        :param season: year (e.g. 2021-2022 is 2022).
         :return: NbaTeam object
         """
         query = self.session\
-            .query(Team, Season)\
-            .where(Season.id == Team.season_id)\
+            .query(Team)\
+            .where(Team.season_id == season_id)\
             .where(Team.name == team)\
-            .where(Season.year == str(season))\
             .one_or_none()
 
         if query is None:
             # TODO: Handle none case.
-            pass
+            raise NotImplementedError()
 
-        team = NbaTeam(query.Team.name, query.Season.year)
-        team.update_features(query.Team)
+        return query
 
-        return team
+    def get_team_logs_by_game_id(self, game_id: int) -> tuple[GameTeamLog, GameTeamLog]:
+        raise NotImplementedError
 
-    def get_player(self, player_code: str) -> NbaPlayer:
+    def get_player(self, player_code: str) -> tuple[Player, PlayerStats]:
         """
         Retrieves a player from the database with their most recently-played season stats (this may change).
         :param player_code: Unique player code.
@@ -604,5 +591,7 @@ class DatabaseService:
             .order_by(PlayerStats.season.desc())\
             .first()
 
-        player = NbaPlayer(query.Player.friendly_name, query.Player.unique_code)
-        return player
+        return query.Player, query.PlayerStats
+
+    def get_player_logs_by_game_id_team_id(self, game_id: int, team_id: int) -> GamePlayerLog:
+        raise NotImplementedError

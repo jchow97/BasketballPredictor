@@ -3,7 +3,6 @@ import pandas as pd
 
 from common.constants import CURRENT_TEAMS
 from models.nba_player import NbaPlayer
-from models.nba_season import NbaSeason
 from models.nba_team import NbaTeam
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
@@ -20,7 +19,7 @@ class NbaPredictor:
         Constructor for Logistic Regression ML pipeline.
         :param seasons: Years for model training.
         """
-        self.training_seasons = seasons
+        self.training_years = seasons
         self.teams = self.create_teams(seasons)
         self.pipeline = Pipeline([
             # ("scale", StandardScaler()),
@@ -31,55 +30,54 @@ class NbaPredictor:
 
         self.db = database_service
 
-    def train_model(self) -> tuple[list[list[float]], list[float], list[list[NbaTeam]]]:
+    def train_model(self):
         """
         Trains the logistic regression model using the specified training years.
-        :return: None
+        :return: TODO (not sure what `pipeline.fit` returns.).
+        """
+
+        """
+        Pseudocode: How model training works.
+            1. 2d array of input (features) -> actual outcome
+                [features] -> pt_differential (home - away)
+            2. run pipeline.fit(training_input_data, training_output_data)
+            
+        """
+        training_input_data, training_output_data = self.generate_training_data()
+        # Train model
+        self.pipeline.fit(training_input_data, training_output_data)
+
+    def generate_training_data(self):
+        """
+        Pseudocode:
+            1. Loop through each season's schedule.
+            2. For each game:
+                a. Get pre-game features' values from Team and Player objects (inputs).
+                b. Get Game + Box Scores from database:
+                    For each game, query for Game.
+                a. calculate the pre-game features' values (inputs).
+                    -> For each player that played: Get their season BPM value.
+                b. calculate the point differential between teams (outcome).
+                c. Use actual team and player box scores to update team features and player BPM values.
+        :return:
         """
         training_input_data = []
-        training_output_data = []
-        input_context = []
+        training_outcome_data = []
 
-        seasons: list[NbaSeason] = self.db.get_seasons(self.training_seasons)
+        for year in self.training_years:
+            schedule = self.db.get_schedule_by_year(year)
+            for match in schedule:
+                home_team_log, away_team_log = self.db.get_team_logs_by_game_id(match.id)
+                # TODO: Check that match.team_id will exist after database model changes.
+                player_logs = self.db.get_player_logs_by_game_id_team_id(match.id, match.team_id)
 
-        # For each season, iterate through each match in the schedule.
-        for season in seasons:
-            for match in season.matches:
-                away_team: NbaTeam = self.teams[f"{match.away_team}_{season}"]
-                home_team: NbaTeam = self.teams[f"{match.home_team}_{season}"]
+                features: list[float] = self.generate_features_differential(home_team_log, away_team_log)
+                features.append(self.calculate_avg_bpm_differential(player_logs))
+                total_points_differential: float = home_team_log.total_points - away_team_log.total_points
+                training_input_data.append(features)
+                training_outcome_data.append(total_points_differential)
 
-                # Get average box plus/minus for each team.
-                away_avg_bpm: float = self.calculate_avg_bpm(match.away_box_score)
-                home_avg_bpm: float = self.calculate_avg_bpm(match.home_box_score)
-
-                # Calculate the differential between the average box plus/minus.
-                bpm_diff = home_avg_bpm - away_avg_bpm
-
-                pre_data: list[float] = self.generate_input_data(away_team, home_team)
-                np.append(pre_data, [self.HOME_COURT_ADV, bpm_diff])
-
-                # Calculate the point differential for each team.
-                away_box_total = match.away_box_score.iloc[-1]
-                away_pts = away_box_total["PTS"]
-                home_box_total = match.home_box_score.iloc[-1]
-                home_pts = home_box_total["PTS"]
-                game_pt_diff = float(away_pts) - float(home_pts)  # Done this way to better reflect spreads.
-
-                # Finalize return data.
-                training_input_data.append(pre_data)
-                training_output_data.append(game_pt_diff)
-                # context/row identifiers [away, home]
-                input_context.append([away_team, home_team])
-
-                print(f'{match.game_code} input and output data added.')
-
-                # Update team objects with new match data.
-                print(f"Updating away team ({away_team}) features.")
-                away_team.update_team_stats(match.away_box_score, match.home_box_score, match.game_summary)
-                print(f"Updating home team ({home_team}) features.")
-                home_team.update_team_stats(match.home_box_score, match.away_box_score, match.game_summary)
-
-        return training_input_data, training_output_data, input_context
+        return training_input_data, training_outcome_data
 
     def run_prediction(self, year: int):
         """
@@ -87,12 +85,14 @@ class NbaPredictor:
         :param year: Season year (2021-2022 is 2022).
         :return:
         """
+        raise NotImplementedError()
 
     def check_prediction(self):
         """
         Checks prediction against odds data for prediction accuracy.
         :return: Prediction accuracy
         """
+        raise NotImplementedError()
 
     def process_odds_data(self, year: int):
         """
@@ -100,21 +100,22 @@ class NbaPredictor:
         :param year: Season year (2021-2022 is 2022).
         :return: A dataframe of the odds data for use.
         """
+        raise NotImplementedError()
 
     @staticmethod
-    def generate_input_data(away: NbaTeam, home: NbaTeam) -> list[float]:
+    def generate_features_differential(home_team_log, away_team_log) -> list[float]:
         """
         Generate the differential between the features of the home team.
-        :param away: Away team object.
-        :param home: Home team object.
+        :param team_logs: Game Team logs for the match.
         :return: List of differences for each feature.
         """
 
-        away_f: list[float] = away.features
-        home_f: list[float] = home.features
-
-        input_data = np.subtract(home_f, away_f)
-        return input_data
+        # away_f: list[float] = away.features
+        # home_f: list[float] = home.features
+        #
+        # input_data = np.subtract(home_f, away_f)
+        # return input_data
+        raise NotImplementedError
 
     @staticmethod
     def create_teams(years: list[int]) -> dict:
@@ -131,21 +132,22 @@ class NbaPredictor:
                 print(f'{team_name} created.')
         return teams
 
-    def calculate_avg_bpm(self, box_score: pd.DataFrame) -> float:
+    def calculate_avg_bpm_differential(self, player_logs) -> float:
         """
         Calculates the average box plus/minus for the team's box score.
-        :param box_score: Dataframe of the team's box score.
+        :param player_logs: Game player logs for the match..
         :return: float of the average box plus/minus.
         """
-        pre_bpm_sum = 0.0
-        count = 0
-
-        for i in box_score.index[:-1]:  # -1 to exclude team totals.
-            player_name = box_score['Players'][i]
-            print(f"Fetching {player_name}'s BPM.")
-            player_code: str = self.db.scraper.get_player_code(player_name)
-            player: NbaPlayer = self.db.get_player(player_code)
-            pre_bpm_sum += float(player.bpm)
-            count += 1
-
-        return pre_bpm_sum / count
+        # pre_bpm_sum = 0.0
+        # count = 0
+        #
+        # for i in box_score.index[:-1]:  # -1 to exclude team totals.
+        #     player_name = box_score['Players'][i]
+        #     print(f"Fetching {player_name}'s BPM.")
+        #     player_code: str = self.db.scraper.get_player_code(player_name)
+        #     player: NbaPlayer = self.db.get_player(player_code)
+        #     pre_bpm_sum += float(player.bpm)
+        #     count += 1
+        #
+        # return pre_bpm_sum / count
+        raise NotImplementedError
