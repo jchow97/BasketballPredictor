@@ -62,7 +62,7 @@ class NbaPredictor:
         :return:
         """
         for year in self.training_years:
-            schedule = self.db.get_schedule(year)
+            schedule = self.db.get_season_by_year(year)
             for match in schedule:
                 team_logs = self.db.get
         raise NotImplementedError()
