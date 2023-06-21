@@ -29,7 +29,7 @@ class TestDatabaseService(unittest.TestCase):
         self.database_service = DatabaseService(session, scraper)
 
     def test_get_season(self):
-        test_season = self.database_service.get_season(2022)
+        test_season = self.database_service.get_schedule(2022)
         self.assertEqual(test_season.season, 2022)
 
     def test_get_game(self):

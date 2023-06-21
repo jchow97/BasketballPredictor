@@ -19,7 +19,7 @@ class NbaPredictor:
         Constructor for Logistic Regression ML pipeline.
         :param seasons: Years for model training.
         """
-        self.training_seasons = seasons
+        self.training_years = seasons
         self.teams = self.create_teams(seasons)
         self.pipeline = Pipeline([
             # ("scale", StandardScaler()),
@@ -61,8 +61,10 @@ class NbaPredictor:
                 c. Use actual team and player box scores to update team features and player BPM values.
         :return:
         """
-
-
+        for year in self.training_years:
+            schedule = self.db.get_schedule(year)
+            for match in schedule:
+                team_logs = self.db.get
         raise NotImplementedError()
 
     def run_prediction(self, year: int):

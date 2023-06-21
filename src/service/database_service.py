@@ -529,11 +529,11 @@ class DatabaseService:
         result: list[NbaSeason] = []
 
         for season in seasons:
-            result.append(self.get_season(season))
+            result.append(self.get_schedule(season))
 
         return result
 
-    def get_season(self, year: int) -> NbaSeason:
+    def get_schedule(self, year: int) -> NbaSeason:
         """
         Retrieves a season's schedule from the database.
         :param year: NBA Season to retrieve (e.g. 2021-2022 season would be 2022).
@@ -590,6 +590,9 @@ class DatabaseService:
         team.update_features(query.Team)
 
         return team
+
+    def get_team_logs_by_game_code(self, game_code: str) -> GameTeamLog:
+        raise NotImplementedError
 
     def get_player(self, player_code: str) -> NbaPlayer:
         """
