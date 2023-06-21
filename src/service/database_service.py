@@ -576,6 +576,11 @@ class DatabaseService:
         return query
 
     def get_team_logs_by_game_id(self, game_id: int) -> tuple[GameTeamLog, GameTeamLog]:
+        """
+        Get Game Team Log (joined with Team to get Team Names).
+        :param game_id:
+        :return:
+        """
         raise NotImplementedError
 
     def get_player(self, player_code: str) -> tuple[Player, PlayerStats]:

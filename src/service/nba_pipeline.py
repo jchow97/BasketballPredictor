@@ -66,16 +66,34 @@ class NbaPredictor:
 
         for year in self.training_years:
             schedule = self.db.get_schedule_by_year(year)
+            players = {}
             for match in schedule:
+                # Get team game logs from database.
                 home_team_log, away_team_log = self.db.get_team_logs_by_game_id(match.id)
+
+                # Get Team objects from memory.
+                home_team_obj = self.teams[f"{home_team_log.team_name}"]
+                away_team_obj = self.teams[f"{away_team_log.team_name}"]
+
                 # TODO: Check that match.team_id will exist after database model changes.
                 player_logs = self.db.get_player_logs_by_game_id_team_id(match.id, match.team_id)
 
-                features: list[float] = self.generate_features_differential(home_team_log, away_team_log)
+                # Get features from team objects (before this game's stats).
+                features: list[float] = self.generate_features_differential(home_team_obj, away_team_obj)
+
+                # Add average BPM from player objects
                 features.append(self.calculate_avg_bpm_differential(player_logs))
+
+                # Calculate outcome data.
                 total_points_differential: float = home_team_log.total_points - away_team_log.total_points
+
                 training_input_data.append(features)
                 training_outcome_data.append(total_points_differential)
+
+                # Update team and player objects.
+                self.update_team_features(home_team_obj, home_team_log)
+                self.update_team_features(away_team_obj, away_team_log)
+                self.update_player_bpm(player_logs)
 
         return training_input_data, training_outcome_data
 
@@ -103,19 +121,19 @@ class NbaPredictor:
         raise NotImplementedError()
 
     @staticmethod
-    def generate_features_differential(home_team_log, away_team_log) -> list[float]:
+    def generate_features_differential(home: NbaTeam, away: NbaTeam) -> list[float]:
         """
         Generate the differential between the features of the home team.
-        :param team_logs: Game Team logs for the match.
+        :param away: Away team object.
+        :param home: Home team object.
         :return: List of differences for each feature.
         """
 
-        # away_f: list[float] = away.features
-        # home_f: list[float] = home.features
-        #
-        # input_data = np.subtract(home_f, away_f)
-        # return input_data
-        raise NotImplementedError
+        away_f: list[float] = away.features
+        home_f: list[float] = home.features
+
+        input_data = np.subtract(home_f, away_f)
+        return input_data
 
     @staticmethod
     def create_teams(years: list[int]) -> dict:
@@ -135,7 +153,7 @@ class NbaPredictor:
     def calculate_avg_bpm_differential(self, player_logs) -> float:
         """
         Calculates the average box plus/minus for the team's box score.
-        :param player_logs: Game player logs for the match..
+        :param player_logs: Game player logs for the match.
         :return: float of the average box plus/minus.
         """
         # pre_bpm_sum = 0.0
@@ -150,4 +168,21 @@ class NbaPredictor:
         #     count += 1
         #
         # return pre_bpm_sum / count
+        raise NotImplementedError
+
+    def update_team_features(self, team_obj, team_log) -> None:
+        """
+        Updates the team object's features with the team's stats for the game.
+        :param team_obj: Team Object
+        :param team_log: Game Team Log.
+        :return: None
+        """
+        raise NotImplementedError
+
+    def update_player_bpm(self, player_log) -> None:
+        """
+        For each player in the player logs, update their BPM.
+        :param player_log: Game Player Log
+        :return: None
+        """
         raise NotImplementedError
