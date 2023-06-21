@@ -61,11 +61,23 @@ class NbaPredictor:
                 c. Use actual team and player box scores to update team features and player BPM values.
         :return:
         """
+        training_input_data = []
+        training_outcome_data = []
+
         for year in self.training_years:
-            schedule = self.db.get_season_by_year(year)
+            schedule = self.db.get_schedule_by_year(year)
             for match in schedule:
-                team_logs = self.db.get
-        raise NotImplementedError()
+                home_team_log, away_team_log = self.db.get_team_logs_by_game_id(match.id)
+                # TODO: Check that match.team_id will exist after database model changes.
+                player_logs = self.db.get_player_logs_by_game_id_team_id(match.id, match.team_id)
+
+                features: list[float] = self.generate_features_differential(home_team_log, away_team_log)
+                features.append(self.calculate_avg_bpm_differential(player_logs))
+                total_points_differential: float = home_team_log.total_points - away_team_log.total_points
+                training_input_data.append(features)
+                training_outcome_data.append(total_points_differential)
+
+        return training_input_data, training_outcome_data
 
     def run_prediction(self, year: int):
         """
@@ -91,19 +103,19 @@ class NbaPredictor:
         raise NotImplementedError()
 
     @staticmethod
-    def generate_features_differential(away: NbaTeam, home: NbaTeam) -> list[float]:
+    def generate_features_differential(home_team_log, away_team_log) -> list[float]:
         """
         Generate the differential between the features of the home team.
-        :param away: Away team object.
-        :param home: Home team object.
+        :param team_logs: Game Team logs for the match.
         :return: List of differences for each feature.
         """
 
-        away_f: list[float] = away.features
-        home_f: list[float] = home.features
-
-        input_data = np.subtract(home_f, away_f)
-        return input_data
+        # away_f: list[float] = away.features
+        # home_f: list[float] = home.features
+        #
+        # input_data = np.subtract(home_f, away_f)
+        # return input_data
+        raise NotImplementedError
 
     @staticmethod
     def create_teams(years: list[int]) -> dict:
@@ -120,21 +132,22 @@ class NbaPredictor:
                 print(f'{team_name} created.')
         return teams
 
-    def calculate_avg_bpm(self, box_score: pd.DataFrame) -> float:
+    def calculate_avg_bpm_differential(self, player_logs) -> float:
         """
         Calculates the average box plus/minus for the team's box score.
-        :param box_score: Dataframe of the team's box score.
+        :param player_logs: Game player logs for the match..
         :return: float of the average box plus/minus.
         """
-        pre_bpm_sum = 0.0
-        count = 0
-
-        for i in box_score.index[:-1]:  # -1 to exclude team totals.
-            player_name = box_score['Players'][i]
-            print(f"Fetching {player_name}'s BPM.")
-            player_code: str = self.db.scraper.get_player_code(player_name)
-            player: NbaPlayer = self.db.get_player(player_code)
-            pre_bpm_sum += float(player.bpm)
-            count += 1
-
-        return pre_bpm_sum / count
+        # pre_bpm_sum = 0.0
+        # count = 0
+        #
+        # for i in box_score.index[:-1]:  # -1 to exclude team totals.
+        #     player_name = box_score['Players'][i]
+        #     print(f"Fetching {player_name}'s BPM.")
+        #     player_code: str = self.db.scraper.get_player_code(player_name)
+        #     player: NbaPlayer = self.db.get_player(player_code)
+        #     pre_bpm_sum += float(player.bpm)
+        #     count += 1
+        #
+        # return pre_bpm_sum / count
+        raise NotImplementedError

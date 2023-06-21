@@ -522,14 +522,14 @@ class DatabaseService:
         :param seasons:
         :return: A big schedule.
         """
-        result: list[Season] = []
+        result: list[Game] = []
 
         for season in seasons:
-            result.append(self.get_season_by_year(season))
+            result.extend(self.get_schedule_by_year(season))
 
         return result
 
-    def get_season_by_year(self, year: int) -> Season:
+    def get_schedule_by_year(self, year: int) -> list[Game]:
         """
         Retrieves a season's schedule from the database.
         :param year: NBA Season to retrieve (e.g. 2021-2022 season would be 2022).
@@ -575,7 +575,7 @@ class DatabaseService:
 
         return query
 
-    def get_team_logs_by_game_code(self, game_code: str) -> GameTeamLog:
+    def get_team_logs_by_game_id(self, game_id: int) -> tuple[GameTeamLog, GameTeamLog]:
         raise NotImplementedError
 
     def get_player(self, player_code: str) -> tuple[Player, PlayerStats]:
@@ -592,3 +592,6 @@ class DatabaseService:
             .first()
 
         return query.Player, query.PlayerStats
+
+    def get_player_logs_by_game_id_team_id(self, game_id: int, team_id: int) -> GamePlayerLog:
+        raise NotImplementedError
