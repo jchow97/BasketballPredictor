@@ -3,8 +3,8 @@ import pandas as pd
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from common.constants import CURRENT_TEAMS, TEAM_ABBRV
-from models.database import Base, Player, GameType, PlayerStatsType, TeamHomeAwayType, \
-    TeamStatsType, Season, Team, TeamStats, TeamAdvancedStats, PlayerStats, Game, GameTeam, GameTeamLog, PlayerTeam, \
+from models.database import Base, Player, GameType, PlayerStatsType, \
+    TeamStatsType, Season, Team, TeamStats, TeamAdvancedStats, PlayerStats, Game, GameTeamLog, PlayerTeam, \
     GamePlayerLog
 from scripts.Scraper import Scraper
 
@@ -45,6 +45,7 @@ class DatabaseService:
             away_team = schedule_df['Visitor/Neutral'][i]
             game = self.add_game(schedule_df, i, season)
             self.add_game_teams(game, home_team, away_team)
+
         self.session.commit()
 
         for player in self.session.query(Player).all():
@@ -71,13 +72,6 @@ class DatabaseService:
         for pst in player_stats_types:
             pst_object = PlayerStatsType(type=pst)
             self.session.add(pst_object)
-            self.session.commit()
-
-        # Add Team Home/Away Types
-        team_home_away_types = ["Home", "Away"]
-        for that in team_home_away_types:
-            that_object = TeamHomeAwayType(type=that)
-            self.session.add(that_object)
             self.session.commit()
 
         # Add Team Stats Types
