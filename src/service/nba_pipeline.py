@@ -47,19 +47,10 @@ class NbaPredictor:
         # Train model
         self.pipeline.fit(training_input_data, training_output_data)
 
-    def generate_training_data(self):
+    def generate_training_data(self) -> tuple[list[list[float]], list[float]]:
         """
-        Pseudocode:
-            1. Loop through each season's schedule.
-            2. For each game:
-                a. Get pre-game features' values from Team and Player objects (inputs).
-                b. Get Game + Box Scores from database:
-                    For each game, query for Game.
-                a. calculate the pre-game features' values (inputs).
-                    -> For each player that played: Get their season BPM value.
-                b. calculate the point differential between teams (outcome).
-                c. Use actual team and player box scores to update team features and player BPM values.
-        :return:
+        Generates training data to train nba model.
+        :return: Training input data (2d array) and training outcome data (array)
         """
         training_input_data = []
         training_outcome_data = []
@@ -75,7 +66,6 @@ class NbaPredictor:
                 home_team_obj = self.teams[f"{home_team_log.team_name}"]
                 away_team_obj = self.teams[f"{away_team_log.team_name}"]
 
-                # TODO: Check that match.team_id will exist after database model changes.
                 home_player_logs = self.db.get_player_logs_by_game_id_team_id(match.id, match.home_team_id)
                 away_player_logs = self.db.get_player_logs_by_game_id_team_id(match.id, match.away_team_id)
 
