@@ -534,9 +534,17 @@ class DatabaseService:
         """
         Get Game Team Log (joined with Team to get Team Names).
         :param game_id:
-        :return:
+        :return: GameTeamLog object
         """
-        raise NotImplementedError
+        query = self.session\
+            .query(GameTeamLog)\
+            .where(GameTeamLog.game_id == game_id)\
+            .all()
+
+        if query is None:
+            raise NotImplementedError
+
+        return query[0], query[1]
 
     def get_player(self, player_code: str) -> tuple[Player, PlayerStats]:
         """
