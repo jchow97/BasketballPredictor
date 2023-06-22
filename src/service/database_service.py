@@ -187,7 +187,7 @@ class DatabaseService:
                 defensive_free_throws_per_field_goal_attempt=0,
             )
             self.session.add(tas)
-            return teams
+        return teams
 
     # noinspection PyTypeChecker
     def add_season(self, year: int):
