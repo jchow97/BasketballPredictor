@@ -26,6 +26,7 @@ class GamePlayerLog(Base):
     id = Column(Integer, primary_key=True)
     player_id = Column(Integer, ForeignKey("player.id", name='fk_game_player_player_id'))
     game_id = Column(Integer, ForeignKey("game.id", name='fk_game_player_game_id'))
+    team_id = Column(Integer, ForeignKey("team.id", name='fk_game_player_team_id'))
 
     minutes_played = Column(String, default=None)
     field_goals = Column(Integer, default=None)

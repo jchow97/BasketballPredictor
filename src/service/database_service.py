@@ -38,14 +38,24 @@ class DatabaseService:
 
         self.add_types()
         season, schedule_df = self.add_season(year)
-        self.add_teams(season.id)
+        teams = self.add_teams(season.id)
 
         for i in schedule_df.index:
-            home_team = schedule_df['Home/Neutral'][i]
-            away_team = schedule_df['Visitor/Neutral'][i]
-            game = self.add_game(schedule_df, i, season)
-            self.add_game_teams(game, home_team, away_team)
+            home_team = teams[schedule_df['Home/Neutral'][i]]
+            away_team = teams[schedule_df['Visitor/Neutral'][i]]
+            game = self.add_game(schedule_df, i, season, home_team, away_team)
 
+            game_summary, home_box, away_box = self.scraper.scrape_nba_match(game.game_code)
+            home_box_team_stats = home_box.iloc[-1]
+            home_team_game_summary = game_summary.iloc[1]
+            away_box_team_stats = away_box.iloc[-1]
+            away_team_game_summary = game_summary.iloc[0]
+
+            self.add_game_team_log(game, home_team, home_team_game_summary, home_box_team_stats)
+            self.add_game_player_logs(game, home_team, home_box)
+            self.add_game_team_log(game, away_team, away_team_game_summary, away_box_team_stats)
+            self.add_game_player_logs(game, away_team, away_box)
+            
         self.session.commit()
 
         for player in self.session.query(Player).all():
@@ -81,7 +91,7 @@ class DatabaseService:
             self.session.add(tst_object)
             self.session.commit()
 
-    def add_teams(self, season_id: int) -> None:
+    def add_teams(self, season_id: int) -> dict[Team]:
         """
         Populate the team tables with the current season's teams initialize their related tables
         (team_stats, team_advanced_stats).
@@ -89,10 +99,12 @@ class DatabaseService:
         :param season_id:
         :return: None
         """
+        teams = {}
 
         for team in CURRENT_TEAMS:
             season = self.session.query(Season.year).where(Season.id == season_id).one()[0]
             prev_year = str(int(season) - 1)
+
             t = Team(
                 season_id=season_id,
                 name=team,
@@ -119,6 +131,7 @@ class DatabaseService:
                 ats_away_losses=0,
                 ats_away_ties=0
             )
+            teams[team] = t
             self.session.add(t)
             self.session.flush()
 
@@ -174,6 +187,7 @@ class DatabaseService:
                 defensive_free_throws_per_field_goal_attempt=0,
             )
             self.session.add(tas)
+            return teams
 
     # noinspection PyTypeChecker
     def add_season(self, year: int):
@@ -270,79 +284,32 @@ class DatabaseService:
                 )
                 self.session.add(player_stats)
 
-    # noinspection DuplicatedCode
-    def add_game_teams(self, game: Game, home_team: str, away_team: str) -> None:
-        """
-        Adds the away and home team's game data to game_team database table.
-        :param game: Related game
-        :param home_team: Home team of the game.
-        :param away_team: Away team of the game
-        :return: None
-        """
-        game_summary, home_box, away_box = self.scraper.scrape_nba_match(game.game_code)
-        # Game Summary headers: Team | 1 | 2 | 3 | 4 | (OT) | T | Pace | eFG% | TOV% | ORB% | FT/FGA | ORtg
-
-        home_box_team_stats = home_box.iloc[-1]
-        home_team_game_summary = game_summary.iloc[1]
-        away_box_team_stats = away_box.iloc[-1]
-        away_team_game_summary = game_summary.iloc[0]
-
-        game_home_team = GameTeam(
-            game_id=game.id,
-            team_id=self.session.query(Team.id).filter(Team.name == home_team).scalar_subquery(),
-            team_home_away_type=1
-        )
-
-        self.session.add(game_home_team)
-        self.session.flush()
-
-        self.add_game_team_log(game_home_team, home_team_game_summary, home_box_team_stats)
-
-        for i in home_box.index[:-1]:
-            player_name = home_box['Players'][i]
-            player_code = home_box['Player Code'][i]
+    def add_game_player_logs(self, game: Game, team: Team, box_score):
+        for i in box_score.index[:-1]:
+            player_name = box_score['Players'][i]
+            player_code = box_score['Player Code'][i]
             player = self.session.query(Player).filter(
                 Player.unique_code == player_code and Player.friendly_name == player_name).one_or_none()
 
             if player is None:
                 player = self.add_player(player_name, player_code)
-                self.add_player_team(player, game_home_team)
+                self.add_player_team(player, team)
 
-            self.add_game_player_log(home_box, i, player, game_home_team)
+            self.add_game_player_log(box_score, i, player, game, team)
 
-        game_away_team = GameTeam(
-            game_id=game.id,
-            team_id=self.session.query(Team.id).filter(Team.name == away_team).scalar_subquery(),
-            team_home_away_type=2
-        )
-        self.session.add(game_away_team)
-        self.session.flush()
-
-        self.add_game_team_log(game_away_team, away_team_game_summary, away_box_team_stats)
-
-        for i in away_box.index[:-1]:
-            player_name = away_box['Players'][i]
-            player_code = away_box['Player Code'][i]
-            player = self.session.query(Player).filter(
-                Player.unique_code == player_code and Player.friendly_name == player_name).one_or_none()
-
-            if player is None:
-                player = self.add_player(player_name, player_code)
-                self.add_player_team(player, game_away_team)
-
-            self.add_game_player_log(away_box, i, player, game_away_team)
-
-    def add_game_team_log(self, game_team: GameTeam, game_summary: pd.DataFrame, team_box_stats: pd.DataFrame):
+    def add_game_team_log(self, game: Game, team: Team, game_summary: pd.DataFrame, team_box_stats: pd.DataFrame):
         """
         Adds a team's game log to the game_team_log database table.
-        :param game_team: Related GameTeam object
+        :param game: Game ORM class object
+        :param team: Team ORM class object
         :param game_summary: Team's statistics dataframe.
         :param team_box_stats: Team's box score dataframe.
         :return:
         """
         # noinspection PyTypeChecker
         gtl = GameTeamLog(
-            game_team_id=game_team.id,
+            game_id=game.id,
+            team_id=team.id,
 
             total_points=game_summary['T'],
             first_quarter_points=game_summary['1'],
@@ -411,39 +378,42 @@ class DatabaseService:
 
         return player
 
-    def add_player_team(self, player: Player, game_team) -> None:
+    def add_player_team(self, player: Player, team: Team) -> None:
         """
         Add a player-team relationship to the player_team database table.
         :param player: Related Player object.
-        :param game_team: The player's team
+        :param team: Team object.
         :return: None
         """
         player_team = PlayerTeam(
             player_id=player.id,
-            team_id=game_team.team_id,
+            team_id=team.id,
             # TODO: Replace datetime.now to actual date.
             start_date=datetime.now()
         )
         self.session.add(player_team)
 
-    def add_game_player_log(self, box_df: pd.DataFrame, i: int, player: Player, game_team: GameTeam) -> None:
+    def add_game_player_log(self, box_df: pd.DataFrame, i: int, player: Player, game: Game, team: Team) -> None:
         """
         Add a player's game log to the game_player_log database table.
         :param box_df: Game's box score dataframe
         :param i: index of the box score to look at
         :param player: Related Player object.
-        :param game_team: Related GameTeam object.
+        :param game: Related Game Object
+        :param team: Related Team Object
         :return: None
         """
         if ("Did Not" in box_df['MP'][i]) or ("Not With" in box_df['MP'][i]):
             game_player_log = GamePlayerLog(
                 player_id=player.id,
-                game_team_id=game_team.id
+                game_id=game.id,
+                team_id=team.id
             )
         else:
             game_player_log = GamePlayerLog(
                 player_id=player.id,
-                game_team_id=game_team.id,
+                game_id=game.id,
+                team_id=team.id,
 
                 minutes_played=box_df['MP'][i] if (box_df['MP'][i] != '') else None,
                 field_goals=box_df['FG'][i] if (box_df['FG'][i] != '') else None,
@@ -485,9 +455,11 @@ class DatabaseService:
         self.session.add(game_player_log)
 
     # noinspection PyTypeChecker
-    def add_game(self, schedule: pd.DataFrame, i: int, season: Season) -> Game:
+    def add_game(self, schedule: pd.DataFrame, i: int, season: Season, home_team: Team, away_team: Team) -> Game:
         """
         Add a game to the game database table.
+        :param away_team: Away team object.
+        :param home_team: Home team object.
         :param schedule: Schedule dataframe.
         :param i: Index to look at
         :param season: Related Season object.
@@ -495,16 +467,16 @@ class DatabaseService:
         """
         # Create game object
         game_datetime = self.scraper.to_postgres_datetime(schedule['Date'][i], schedule['Start (ET)'][i])
-        home_team = schedule['Home/Neutral'][i]
-        # away_team = schedule['Visitor/Neutral'][i]
-        game_code = self.scraper.get_game_code(schedule['Date'][i], home_team)
+        game_code = self.scraper.get_game_code(schedule['Date'][i], home_team.abbreviation)
 
         # TODO: (#3) Correct assignment of game types.
         game = Game(
             season_id=season.id,
             type=2,  # 2: regular season
             start_datetime=game_datetime,
-            game_code=game_code
+            game_code=game_code,
+            home_team_id=home_team.id,
+            away_team_id=away_team.id
         )
         self.session.add(game)
         self.session.flush()
@@ -537,18 +509,7 @@ class DatabaseService:
         :param game_code: Unique game code
         :return: TODO
         """
-        query = self.session\
-            .query(Game, GameTeam, GameTeamLog, Team)\
-            .where(Game.game_code == game_code)\
-            .where(GameTeam.game_id == Game.id)\
-            .where(GameTeamLog.game_team_id == GameTeam.id)\
-            .where(Team.id == GameTeam.team_id)\
-            .all()
-
-        if query is None:
-            raise NotImplementedError()
-
-        return query
+        raise NotImplementedError
 
     def get_team_by_name_and_season_id(self, team: str, season_id: int) -> Team:
         """
