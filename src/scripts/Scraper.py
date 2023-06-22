@@ -304,11 +304,11 @@ class Scraper:
         return rows_data
 
     @staticmethod
-    def get_game_code(date, home_team) -> str:
+    def get_game_code(date, home_team_abbr) -> str:
         """
         Gets the basketball-reference game-code based on the date and home team.
         :param date: Date string
-        :param home_team: Home team's 3-letter abbreviation.
+        :param home_team_abbr: Home team's 3-letter abbreviation.
         :return: Game Code string.
         """
         parsed_date = date.split()
@@ -318,7 +318,7 @@ class Scraper:
         if len(game_date_day) == 1:
             game_date_day = '0' + game_date_day
 
-        game_code = game_date_year + game_date_month + game_date_day + '0' + TEAM_ABBRV[home_team]
+        game_code = game_date_year + game_date_month + game_date_day + '0' + home_team_abbr
 
         return game_code
 

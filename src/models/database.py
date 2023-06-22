@@ -12,6 +12,12 @@ class Game(Base):
     type = Column(Integer, ForeignKey("game_type.id", name='fk_game_game_type_id'))
     start_datetime = Column(DateTime)
     game_code = Column(String)
+    home_team_id = Column(Integer, ForeignKey("team.id", name='fk_game_home_team_id'))
+    away_team_id = Column(Integer, ForeignKey("team.id", name='fk_game_away_team_id'))
+    spread = Column(DECIMAL)
+    odds = Column(DECIMAL)
+    money_line_odds = Column(DECIMAL)
+    over_under_odds = Column(DECIMAL)
 
 
 class GamePlayerLog(Base):
@@ -19,7 +25,8 @@ class GamePlayerLog(Base):
 
     id = Column(Integer, primary_key=True)
     player_id = Column(Integer, ForeignKey("player.id", name='fk_game_player_player_id'))
-    game_team_id = Column(Integer, ForeignKey("game_team.id", name='fk_game_player_game_team_id'))
+    game_id = Column(Integer, ForeignKey("game.id", name='fk_game_player_game_id'))
+    team_id = Column(Integer, ForeignKey("team.id", name='fk_game_player_team_id'))
 
     minutes_played = Column(String, default=None)
     field_goals = Column(Integer, default=None)
@@ -58,26 +65,12 @@ class GamePlayerLog(Base):
     box_plus_minus = Column(DECIMAL, default=None)
 
 
-class GameTeam(Base):
-    __tablename__ = "game_team"
-
-    id = Column(Integer, primary_key=True)
-    game_id = Column(Integer, ForeignKey("game.id", name='fk_game_team_game_id'))
-    team_id = Column(Integer, ForeignKey("team.id", name='fk_game_team_team_id'))
-    team_home_away_type = Column(Integer, ForeignKey("team_home_away_type.id",
-                                                     name='fk_game_team_team_home_away_type_id'))
-    game_team_log_id = Column(Integer, ForeignKey("game_team_log.id", name='fk_game_team_game_team_log_id'))
-    spread = Column(DECIMAL)
-    odds = Column(DECIMAL)
-    money_line_odds = Column(DECIMAL)
-    over_under_odds = Column(DECIMAL)
-
-
 class GameTeamLog(Base):
     __tablename__ = "game_team_log"
 
     id = Column(Integer, primary_key=True)
-    game_team_id = Column(Integer, ForeignKey("game_team.id", name='fk_game_team_log_game_team_id'))
+    game_id = Column(Integer, ForeignKey("game.id", name='fk_game_team_log_game_id'))
+    team_id = Column(Integer, ForeignKey("team.id", name='fk_game_team_log_team_id'))
 
     total_points = Column(Integer)
     first_quarter_points = Column(Integer)
@@ -243,13 +236,6 @@ class Team(Base):
     ats_away_wins = Column(Integer)
     ats_away_losses = Column(Integer)
     ats_away_ties = Column(Integer)
-
-
-class TeamHomeAwayType(Base):
-    __tablename__ = "team_home_away_type"
-
-    id = Column(Integer, primary_key=True)
-    type = Column(String)
 
 
 class TeamStats(Base):

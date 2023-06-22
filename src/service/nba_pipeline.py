@@ -76,13 +76,14 @@ class NbaPredictor:
                 away_team_obj = self.teams[f"{away_team_log.team_name}"]
 
                 # TODO: Check that match.team_id will exist after database model changes.
-                player_logs = self.db.get_player_logs_by_game_id_team_id(match.id, match.team_id)
+                home_player_logs = self.db.get_player_logs_by_game_id_team_id(match.id, match.home_team_id)
+                away_player_logs = self.db.get_player_logs_by_game_id_team_id(match.id, match.away_team_id)
 
                 # Get features from team objects (before this game's stats).
                 features: list[float] = self.generate_features_differential(home_team_obj, away_team_obj)
 
-                # Add average BPM from player objects
-                features.append(self.calculate_avg_bpm_differential(player_logs))
+                # Add average BPM differential from player objects
+                features.append(self.calculate_avg_bpm_differential(home_player_logs, away_player_logs))
 
                 # Calculate outcome data.
                 total_points_differential: float = home_team_log.total_points - away_team_log.total_points
@@ -93,7 +94,8 @@ class NbaPredictor:
                 # Update team and player objects.
                 self.update_team_features(home_team_obj, home_team_log)
                 self.update_team_features(away_team_obj, away_team_log)
-                self.update_player_bpm(player_logs)
+                self.update_player_bpm(home_player_logs)
+                self.update_player_bpm(away_player_logs)
 
         return training_input_data, training_outcome_data
 
@@ -150,10 +152,11 @@ class NbaPredictor:
                 print(f'{team_name} created.')
         return teams
 
-    def calculate_avg_bpm_differential(self, player_logs) -> float:
+    def calculate_avg_bpm_differential(self, home_player_logs, away_player_logs) -> float:
         """
-        Calculates the average box plus/minus for the team's box score.
-        :param player_logs: Game player logs for the match.
+        Calculates the average box plus/minus differential of the players between two teams in a match.
+        :param home_player_logs: Home team's player logs for the match.
+        :param away_player_logs: Away team's player logs for the match.
         :return: float of the average box plus/minus.
         """
         # pre_bpm_sum = 0.0
