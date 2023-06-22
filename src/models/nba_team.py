@@ -1,3 +1,5 @@
+from collections import deque
+
 import pandas as pd
 
 from common.constants import TEAM_ABBRV
@@ -13,6 +15,7 @@ class NbaTeam:
     the course of a season, divided by the number of games played. This may cause statistical differences
     compared to the basketball-reference data.
     """
+
     class Node:
         def __init__(self, val='N/A', next=None, prev=None):
             self.val = val
@@ -58,18 +61,7 @@ class NbaTeam:
         self.opp_tov_pct_total = 0.0
         self.pace_total = 0.0
 
-        # Create last 10 linked list.
-        count = 0
-        self.last10_head = self.Node()
-        curr = self.last10_head
-        prev = None
-        while count < 10:
-            curr.next = self.Node()
-            prev = curr
-            curr = curr.next
-            curr.prev = prev
-            count += 1
-        self.last10_tail = curr
+        self.last10 = deque(maxlen=10)
         self.last10_pct = self.calculate_last10()
 
         self.features: list[float] = []
@@ -79,7 +71,17 @@ class NbaTeam:
         Calculates and returns the win/loss percentage of the last 10 games played.
         :return: float of win/loss% of the last 10 games.
         """
-        raise NotImplementedError()
+        wins, losses = 0, 0
+        for g in self.last10:
+            if g == "W":
+                wins += 1
+            else:
+                losses += 1
+
+        if wins == 0:
+            return 0.0
+        else:
+            return float(wins / float(wins + losses))
 
     def calculate_win_loss_pct(self) -> float:
         """
