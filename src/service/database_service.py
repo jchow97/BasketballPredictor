@@ -2,6 +2,7 @@ from datetime import datetime
 import pandas as pd
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
+from sqlalchemy.engine.row import Row
 from common.constants import CURRENT_TEAMS, TEAM_ABBRV
 from models.database import Base, Player, GameType, PlayerStatsType, \
     TeamStatsType, Season, Team, TeamStats, TeamAdvancedStats, PlayerStats, Game, GameTeamLog, PlayerTeam, \
@@ -544,15 +545,16 @@ class DatabaseService:
 
         return query
 
-    def get_team_logs_by_game_id(self, game_id: int) -> tuple[GameTeamLog, GameTeamLog]:
+    def get_team_logs_by_game_id(self, game_id: int) -> tuple[Row, Row]:
         """
         Get Game Team Log (joined with Team to get Team Names).
         :param game_id:
-        :return: GameTeamLog object
+        :return: sqlalchemy.engine.row.Row (GameTeamLog, str)
         """
-        query = self.session\
-            .query(GameTeamLog)\
+        query: list[Row] = self.session\
+            .query(GameTeamLog, Team.name)\
             .where(GameTeamLog.game_id == game_id)\
+            .where(GameTeamLog.team_id == Team.id)\
             .all()
 
         if query is None:

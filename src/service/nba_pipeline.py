@@ -20,7 +20,6 @@ class NbaPredictor:
         :param seasons: Years for model training.
         """
         self.training_years = seasons
-        self.teams = self.create_teams(seasons)
         self.pipeline = Pipeline([
             # ("scale", StandardScaler()),
             ("model", LogisticRegression(random_state=True, solver='liblinear', max_iter=100))
@@ -58,14 +57,15 @@ class NbaPredictor:
         for year in self.training_years:
             season = self.db.get_season_by_year(year)
             schedule = self.db.get_games_by_season_id(season.id)
+            teams = self.create_teams(year)
             players = {}
             for match in schedule:
                 # Get team game logs from database.
                 home_team_log, away_team_log = self.db.get_team_logs_by_game_id(match.id)
 
                 # Get Team objects from memory.
-                home_team_obj = self.teams[f"{home_team_log.team_name}"]
-                away_team_obj = self.teams[f"{away_team_log.team_name}"]
+                home_team_obj = teams[f"{home_team_log.name}"]
+                away_team_obj = teams[f"{away_team_log.name}"]
 
                 home_player_logs = self.db.get_player_logs_by_game_id_team_id(match.id, match.home_team_id)
                 away_player_logs = self.db.get_player_logs_by_game_id_team_id(match.id, match.away_team_id)
@@ -129,18 +129,16 @@ class NbaPredictor:
         return input_data
 
     @staticmethod
-    def create_teams(years: list[int]) -> dict:
+    def create_teams(year: int) -> dict:
         """
         Creates a dictionary of all current teams, for each year.
-        :param years: Seasons to create teams for.
+        :param year: Seasons to create teams for.
         :return: Dictionary of NBA teams (season unique).
         """
-        teams = dict()
-        for year in years:
-            for team in CURRENT_TEAMS:
-                team_name = f"{team}_{year}"
-                teams[team_name] = NbaTeam(team, year)
-                print(f'{team_name} created.')
+        teams = {}
+        for team in CURRENT_TEAMS:
+            teams[team] = NbaTeam(team, year)
+            print(f'{team} created.')
         return teams
 
     def calculate_avg_bpm_differential(self, home_player_logs, away_player_logs) -> float:
