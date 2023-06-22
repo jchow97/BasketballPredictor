@@ -482,26 +482,40 @@ class DatabaseService:
         self.session.flush()
         return game
 
-    def get_seasons_by_years(self, seasons: list[int]) -> list[Season]:
+    def get_seasons_by_years(self, years: list[int]) -> list[Season]:
         """
         Combines various season schedules from the database and returns as one giant schedule, ordered by game time.
-        :param seasons:
-        :return: A big schedule.
+        :param years:
+        :return: A list of seasons.
         """
-        result: list[Game] = []
+        result: list[Season] = []
 
-        for season in seasons:
-            result.extend(self.get_schedule_by_year(season))
+        for year in years:
+            season: Season = self.get_season_by_year(year)
+
+            if season is None:
+                raise Exception(f"Season {year} could not be found, or there is more than one.")
+
+            result.extend(self.get_games_by_season_id(season))
 
         return result
 
-    def get_schedule_by_year(self, year: int) -> list[Game]:
+    def get_season_by_year(self, year: int) -> Season:
+        query: Season = self.session.query(Season).where(Season.year == str(year)).one_or_none()
+        return query
+
+    def get_games_by_season_id(self, season_id: int) -> list[Game]:
         """
         Retrieves a season's schedule from the database.
-        :param year: NBA Season to retrieve (e.g. 2021-2022 season would be 2022).
+        :param season_id: Season id.
         :return: A dataframe of the NBA season schedule.
         """
-        raise NotImplementedError
+        query: list[Game] = self.session\
+            .query(Game)\
+            .where(Game.season_id == season_id)\
+            .all()
+
+        return query
 
     def get_game_by_game_code(self, game_code: str) -> Game:
         """

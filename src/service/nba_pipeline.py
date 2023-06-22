@@ -56,7 +56,8 @@ class NbaPredictor:
         training_outcome_data = []
 
         for year in self.training_years:
-            schedule = self.db.get_schedule_by_year(year)
+            season = self.db.get_season_by_year(year)
+            schedule = self.db.get_games_by_season_id(season.id)
             players = {}
             for match in schedule:
                 # Get team game logs from database.
