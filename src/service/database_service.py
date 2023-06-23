@@ -577,5 +577,17 @@ class DatabaseService:
 
         return query.Player, query.PlayerStats
 
-    def get_player_logs_by_game_id_team_id(self, game_id: int, team_id: int) -> GamePlayerLog:
-        raise NotImplementedError
+    def get_player_logs_by_game_id_team_id(self, game_id: int, team_id: int) -> list[GamePlayerLog]:
+        """
+        Retrieves the player logs from a game by game id and team id.
+        :param game_id: Game id
+        :param team_id: Team id
+        :return: List of player logs
+        """
+        query = self.session\
+            .query(GamePlayerLog)\
+            .where(GamePlayerLog.game_id == game_id)\
+            .where(GamePlayerLog.team_id == team_id)\
+            .all()
+
+        return query
