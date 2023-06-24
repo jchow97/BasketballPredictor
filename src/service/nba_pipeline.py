@@ -1,7 +1,8 @@
 import numpy as np
-import pandas as pd
+from sqlalchemy.engine import Row
 
 from common.constants import CURRENT_TEAMS
+from models.database import GamePlayerLog
 from models.nba_player import NbaPlayer
 from models.nba_team import NbaTeam
 from sklearn.linear_model import LogisticRegression
@@ -67,8 +68,10 @@ class NbaPredictor:
                 home_team_obj: NbaTeam = teams[f"{home_team_log.name}"]
                 away_team_obj: NbaTeam = teams[f"{away_team_log.name}"]
 
-                home_player_logs = self.db.get_player_logs_by_game_id_team_id(match.id, match.home_team_id)
-                away_player_logs = self.db.get_player_logs_by_game_id_team_id(match.id, match.away_team_id)
+                home_player_logs: list[GamePlayerLog] = self.db.get_player_logs_by_game_id_team_id(match.id,
+                                                                                                   match.home_team_id)
+                away_player_logs: list[GamePlayerLog] = self.db.get_player_logs_by_game_id_team_id(match.id,
+                                                                                                   match.away_team_id)
 
                 # Get features from team objects (before this game's stats).
                 features: list[float] = self.generate_features_differential(home_team_obj, away_team_obj)
@@ -84,10 +87,8 @@ class NbaPredictor:
                 training_outcome_data.append(total_points_differential)
 
                 # Update team and player objects.
-                self.update_team_features(home_team_obj, home_team_log)
-                self.update_team_features(away_team_obj, away_team_log)
-                self.update_player_bpm(home_player_logs)
-                self.update_player_bpm(away_player_logs)
+                self.update_team_features(home_team_obj, home_team_log, away_team_log)
+                self.update_team_features(away_team_obj, away_team_log, home_team_log)
 
         return training_input_data, training_outcome_data
 
@@ -167,6 +168,7 @@ class NbaPredictor:
                 pre_bpm_sum += float(player_obj.box_pm)
             count += 1
 
+            self.update_player_bpm(player_log, player)
         if count == 0:
             return 0
 
@@ -182,7 +184,7 @@ class NbaPredictor:
         :return: None
         """
         team.games += 1
-        
+
         if float(team_log.GameTeamLog.total_points) > float(opp_team_log.GameTeamLog.total_points):
             team.wins += 1
             team.calculate_win_loss_pct()
@@ -193,7 +195,7 @@ class NbaPredictor:
             team.calculate_win_loss_pct()
             team.last10.popleft()
             team.last10.append("L")
-            
+
         margin_of_victory = team_log.GameTeamLog.total_points - opp_team_log.GameTeamLog.total_points
         team.mov_total += margin_of_victory
         team.mov = team.mov_total / team.games
@@ -227,12 +229,17 @@ class NbaPredictor:
 
         team.update_features()
         print(f"{team.team_name} features updated.")
-        
 
-    def update_player_bpm(self, player_log) -> None:
+    @staticmethod
+    def update_player_bpm(player_log: GamePlayerLog, player: NbaPlayer) -> None:
         """
         For each player in the player logs, update their BPM.
+        :param player: NbaPlayer Object
         :param player_log: Game Player Log
         :return: None
         """
-        raise NotImplementedError
+        player.games_played += 1
+        bpm = player_log.box_plus_minus
+        if bpm is not None:
+            player.bpm_total += float(bpm)
+            player.bpm = player.bpm_total / player.games_played

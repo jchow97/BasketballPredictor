@@ -102,7 +102,7 @@ class NbaTeam:
 
         raise NotImplementedError()
 
-    def update_features(self, database_team: Team):
+    def update_features(self):
         """
         Updates the feature properties using database Team object's properties. Useful for data persistence.
         :param database_team:
