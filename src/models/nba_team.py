@@ -86,9 +86,14 @@ class NbaTeam:
     def calculate_win_loss_pct(self) -> None:
         """
         Updates win pct based on the current wins and losses.
-        :return: float of the win/loss percentage of the team.
+        :return: None
         """
-        raise NotImplementedError()
+        if self.wins == 0:
+            self.win_loss_pct = 0.0
+        elif self.losses == 0:
+            self.win_loss_pct = 1.0
+        else:
+            self.win_loss_pct = self.wins / self.losses
 
     def update_team_stats(self, team_box_score: pd.DataFrame, opponent_box_score: pd.DataFrame,
                           game_summary: pd.DataFrame) -> None:
@@ -102,10 +107,13 @@ class NbaTeam:
 
         raise NotImplementedError()
 
-    def update_features(self):
+    def update_last10(self, result: str) -> None:
         """
-        Updates the feature properties using database Team object's properties. Useful for data persistence.
-        :param database_team:
+        Updates the last 10 record for the team with the new result.
+        :param result:
         :return:
         """
-        raise NotImplementedError()
+        if len(self.last10) == 10:
+            self.last10.popleft()
+
+        self.last10.append(result)

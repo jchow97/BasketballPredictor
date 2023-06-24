@@ -189,13 +189,11 @@ class NbaPredictor:
         if float(team_log.GameTeamLog.total_points) > float(opp_team_log.GameTeamLog.total_points):
             team.wins += 1
             team.calculate_win_loss_pct()
-            team.last10.popleft()
-            team.last10.append("W")
+            team.update_last10("W")
         else:
             team.losses += 1
             team.calculate_win_loss_pct()
-            team.last10.popleft()
-            team.last10.append("L")
+            team.update_last10("L")
 
         margin_of_victory = team_log.GameTeamLog.total_points - opp_team_log.GameTeamLog.total_points
         team.mov_total += margin_of_victory
@@ -228,7 +226,6 @@ class NbaPredictor:
         # Only need to recalculate because add_last10() was already called earlier
         team.last10_pct = team.calculate_last10()
 
-        team.update_features()
         print(f"{team.team_name} features updated.")
 
     @staticmethod
