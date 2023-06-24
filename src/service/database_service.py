@@ -1,7 +1,10 @@
 from datetime import datetime
+from typing import Type
+
 import pandas as pd
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
+from sqlalchemy.engine.row import Row
 from common.constants import CURRENT_TEAMS, TEAM_ABBRV
 from models.database import Base, Player, GameType, PlayerStatsType, \
     TeamStatsType, Season, Team, TeamStats, TeamAdvancedStats, PlayerStats, Game, GameTeamLog, PlayerTeam, \
@@ -482,26 +485,40 @@ class DatabaseService:
         self.session.flush()
         return game
 
-    def get_seasons_by_years(self, seasons: list[int]) -> list[Season]:
+    def get_seasons_by_years(self, years: list[int]) -> list[Season]:
         """
         Combines various season schedules from the database and returns as one giant schedule, ordered by game time.
-        :param seasons:
-        :return: A big schedule.
+        :param years:
+        :return: A list of seasons.
         """
-        result: list[Game] = []
+        result: list[Season] = []
 
-        for season in seasons:
-            result.extend(self.get_schedule_by_year(season))
+        for year in years:
+            season: Season = self.get_season_by_year(year)
+
+            if season is None:
+                raise Exception(f"Season {year} could not be found, or there is more than one.")
+
+            result.extend(self.get_games_by_season_id(season))
 
         return result
 
-    def get_schedule_by_year(self, year: int) -> list[Game]:
+    def get_season_by_year(self, year: int) -> Season:
+        query: Season = self.session.query(Season).where(Season.year == str(year)).one_or_none()
+        return query
+
+    def get_games_by_season_id(self, season_id: int) -> list[Game]:
         """
         Retrieves a season's schedule from the database.
-        :param year: NBA Season to retrieve (e.g. 2021-2022 season would be 2022).
+        :param season_id: Season id.
         :return: A dataframe of the NBA season schedule.
         """
-        raise NotImplementedError
+        query: list[Game] = self.session\
+            .query(Game)\
+            .where(Game.season_id == season_id)\
+            .all()
+
+        return query
 
     def get_game_by_game_code(self, game_code: str) -> Game:
         """
@@ -530,28 +547,64 @@ class DatabaseService:
 
         return query
 
-    def get_team_logs_by_game_id(self, game_id: int) -> tuple[GameTeamLog, GameTeamLog]:
+    def get_team_logs_by_game_id(self, game_id: int) -> tuple[Row, Row]:
         """
         Get Game Team Log (joined with Team to get Team Names).
         :param game_id:
-        :return:
+        :return: sqlalchemy.engine.row.Row (GameTeamLog, str)
         """
-        raise NotImplementedError
+        query: list[Row] = self.session\
+            .query(GameTeamLog, Team.name)\
+            .where(GameTeamLog.game_id == game_id)\
+            .where(GameTeamLog.team_id == Team.id)\
+            .all()
 
-    def get_player(self, player_code: str) -> tuple[Player, PlayerStats]:
+        if query is None:
+            raise NotImplementedError
+
+        return query[0], query[1]
+
+    def get_player_by_player_id(self, player_id: str) -> Type[NotImplementedError] | Player:
         """
-        Retrieves a player from the database with their most recently-played season stats (this may change).
-        :param player_code: Unique player code.
-        :return: NbaPlayer object
+        Retrieves a player from the database.
+        :param player_id: Player id
+        :return: Player Object
         """
-        query = self.session\
-            .query(Player, PlayerStats)\
-            .where(Player.id == PlayerStats.player_id)\
-            .where(Player.unique_code == player_code)\
+        query: Player = self.session\
+            .query(Player)\
+            .where(Player.id == player_id)\
+            .one_or_none()
+
+        if query is None:
+            return NotImplementedError
+
+        return query
+
+    def get_player_stats_by_player_id(self, player_id: str) -> PlayerStats:
+        """
+        Retrieves a player's most recently-played season stats (this may change).
+        :param player_id: Unique player id.
+        :return: PlayerStats object
+        """
+        query: PlayerStats = self.session\
+            .query(PlayerStats)\
+            .where(PlayerStats.player_id == player_id)\
             .order_by(PlayerStats.season.desc())\
             .first()
 
-        return query.Player, query.PlayerStats
+        return query
 
-    def get_player_logs_by_game_id_team_id(self, game_id: int, team_id: int) -> GamePlayerLog:
-        raise NotImplementedError
+    def get_player_logs_by_game_id_team_id(self, game_id: int, team_id: int) -> list[GamePlayerLog]:
+        """
+        Retrieves the player logs from a game by game id and team id.
+        :param game_id: Game id
+        :param team_id: Team id
+        :return: List of player logs
+        """
+        query = self.session\
+            .query(GamePlayerLog)\
+            .where(GamePlayerLog.game_id == game_id)\
+            .where(GamePlayerLog.team_id == team_id)\
+            .all()
+
+        return query

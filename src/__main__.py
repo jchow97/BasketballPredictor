@@ -15,8 +15,8 @@ def main():
     scraper = Scraper()
     db_service = DatabaseService(session, scraper)
 
-    db_service.initialize_database()
-    db_service.populate_tables(2022)
+    # db_service.initialize_database()
+    # db_service.populate_tables(2022)
 
     predictor = NbaPredictor(db_service, [2022])
     training_input, training_output, input_context = predictor.train_model()
