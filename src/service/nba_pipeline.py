@@ -64,8 +64,8 @@ class NbaPredictor:
                 home_team_log, away_team_log = self.db.get_team_logs_by_game_id(match.id)
 
                 # Get Team objects from memory.
-                home_team_obj = teams[f"{home_team_log.name}"]
-                away_team_obj = teams[f"{away_team_log.name}"]
+                home_team_obj: NbaTeam = teams[f"{home_team_log.name}"]
+                away_team_obj: NbaTeam = teams[f"{away_team_log.name}"]
 
                 home_player_logs = self.db.get_player_logs_by_game_id_team_id(match.id, match.home_team_id)
                 away_player_logs = self.db.get_player_logs_by_game_id_team_id(match.id, match.away_team_id)
@@ -172,14 +172,62 @@ class NbaPredictor:
 
         return pre_bpm_sum / count
 
-    def update_team_features(self, team_obj, team_log) -> None:
+    @staticmethod
+    def update_team_features(team, team_log, opp_team_log) -> None:
         """
         Updates the team object's features with the team's stats for the game.
-        :param team_obj: Team Object
-        :param team_log: Game Team Log.
+        :param team: Team Object
+        :param team_log: Game Team Log data row
+        :param opp_team_log: Opposing team's Game Team Log data row
         :return: None
         """
-        raise NotImplementedError
+        team.games += 1
+        
+        if float(team_log.GameTeamLog.total_points) > float(opp_team_log.GameTeamLog.total_points):
+            team.wins += 1
+            team.calculate_win_loss_pct()
+            team.last10.popleft()
+            team.last10.append("W")
+        else:
+            team.losses += 1
+            team.calculate_win_loss_pct()
+            team.last10.popleft()
+            team.last10.append("L")
+            
+        margin_of_victory = team_log.GameTeamLog.total_points - opp_team_log.GameTeamLog.total_points
+        team.mov_total += margin_of_victory
+        team.mov = team.mov_total / team.games
+
+        team.off_rtg_total += float(team_log.GameTeamLog.offensive_rating)
+        team.off_rtg = team.off_rtg_total / team.games
+
+        team.tov_pct_total += float(team_log.GameTeamLog.turnover_pct)
+        team.tov_pct = team.tov_pct_total / team.games
+
+        team.off_reb_total += float(team_log.GameTeamLog.offensive_rebounds)
+        team.off_reb = team.off_reb_total / team.games
+
+        team.ts_pct_total += float(team_log.GameTeamLog.true_shooting_pct)
+        team.ts_pct = team.ts_pct_total / team.games
+
+        team.def_rtg_total += float(team_log.GameTeamLog.defensive_rating)
+        team.def_rtg = team.def_rtg_total / team.games
+
+        team.def_reb_total += float(team_log.GameTeamLog.defensive_rebounds)
+        team.def_reb = team.def_reb_total / team.games
+
+        team.opp_tov_pct_total += float(opp_team_log.GameTeamLog.turnover_pct)
+        team.opp_tov_pct = team.opp_tov_pct_total / team.games
+
+        team.pace_total += float(team_log.GameTeamLog.pace)
+        team.pace = team.pace_total / team.games
+
+        # Only need to recalculate because add_last10() was already called earlier
+        team.last10_pct = team.calculate_last10()
+
+        team.update_features()
+        print(f"{team.team_name} features updated.")
+        
 
     def update_player_bpm(self, player_log) -> None:
         """

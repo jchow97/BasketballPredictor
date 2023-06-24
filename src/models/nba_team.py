@@ -83,9 +83,9 @@ class NbaTeam:
         else:
             return float(wins / float(wins + losses))
 
-    def calculate_win_loss_pct(self) -> float:
+    def calculate_win_loss_pct(self) -> None:
         """
-        Calculates win pct based on the current wins and losses.
+        Updates win pct based on the current wins and losses.
         :return: float of the win/loss percentage of the team.
         """
         raise NotImplementedError()
