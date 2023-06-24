@@ -59,7 +59,7 @@ class NbaPredictor:
             season = self.db.get_season_by_year(year)
             schedule = self.db.get_games_by_season_id(season.id)
             teams = self.create_teams(year)
-            players = {}
+            players: dict[NbaPlayer] = {}
             for match in schedule:
                 # Get team game logs from database.
                 home_team_log, away_team_log = self.db.get_team_logs_by_game_id(match.id)
@@ -77,11 +77,12 @@ class NbaPredictor:
                 features: list[float] = self.generate_features_differential(home_team_obj, away_team_obj)
 
                 # Add average BPM differential from player objects
-                features.append((self.calculate_avg_bpm(home_player_logs, players) -
-                                 self.calculate_avg_bpm(away_player_logs, players)))
+                np.append(features, (self.calculate_avg_bpm(home_player_logs, players) -
+                                     self.calculate_avg_bpm(away_player_logs, players)))
 
                 # Calculate outcome data.
-                total_points_differential: float = home_team_log.total_points - away_team_log.total_points
+                total_points_differential: float = home_team_log.GameTeamLog.total_points - \
+                                                   away_team_log.GameTeamLog.total_points
 
                 training_input_data.append(features)
                 training_outcome_data.append(total_points_differential)
@@ -163,12 +164,12 @@ class NbaPredictor:
             player_obj = players.get(player.unique_code)
             if not player_obj:
                 players[player.unique_code] = NbaPlayer(player.friendly_name, player.unique_code)
-                pre_bpm_sum += float(players[player.unique_code].box_pm)
+                pre_bpm_sum += float(players[player.unique_code].bpm)
             else:
-                pre_bpm_sum += float(player_obj.box_pm)
+                pre_bpm_sum += float(player_obj.bpm)
             count += 1
 
-            self.update_player_bpm(player_log, player)
+            self.update_player_bpm(player_log, players[player.unique_code])
         if count == 0:
             return 0
 
