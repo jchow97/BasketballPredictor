@@ -1,4 +1,6 @@
 from datetime import datetime
+from typing import Type
+
 import pandas as pd
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
@@ -562,20 +564,35 @@ class DatabaseService:
 
         return query[0], query[1]
 
-    def get_player(self, player_code: str) -> tuple[Player, PlayerStats]:
+    def get_player_by_player_id(self, player_id: str) -> Type[NotImplementedError] | Player:
         """
-        Retrieves a player from the database with their most recently-played season stats (this may change).
-        :param player_code: Unique player code.
-        :return: NbaPlayer object
+        Retrieves a player from the database.
+        :param player_id: Player id
+        :return: Player Object
         """
-        query = self.session\
-            .query(Player, PlayerStats)\
-            .where(Player.id == PlayerStats.player_id)\
-            .where(Player.unique_code == player_code)\
+        query: Player = self.session\
+            .query(Player)\
+            .where(Player.id == player_id)\
+            .one_or_none()
+
+        if query is None:
+            return NotImplementedError
+
+        return query
+
+    def get_player_stats_by_player_id(self, player_id: str) -> PlayerStats:
+        """
+        Retrieves a player's most recently-played season stats (this may change).
+        :param player_id: Unique player id.
+        :return: PlayerStats object
+        """
+        query: PlayerStats = self.session\
+            .query(PlayerStats)\
+            .where(PlayerStats.player_id == player_id)\
             .order_by(PlayerStats.season.desc())\
             .first()
 
-        return query.Player, query.PlayerStats
+        return query
 
     def get_player_logs_by_game_id_team_id(self, game_id: int, team_id: int) -> list[GamePlayerLog]:
         """

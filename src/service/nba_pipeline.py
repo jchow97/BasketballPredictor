@@ -74,7 +74,8 @@ class NbaPredictor:
                 features: list[float] = self.generate_features_differential(home_team_obj, away_team_obj)
 
                 # Add average BPM differential from player objects
-                features.append(self.calculate_avg_bpm_differential(home_player_logs, away_player_logs))
+                features.append((self.calculate_avg_bpm(home_player_logs, players) -
+                                 self.calculate_avg_bpm(away_player_logs, players)))
 
                 # Calculate outcome data.
                 total_points_differential: float = home_team_log.total_points - away_team_log.total_points
@@ -141,26 +142,35 @@ class NbaPredictor:
             print(f'{team} created.')
         return teams
 
-    def calculate_avg_bpm_differential(self, home_player_logs, away_player_logs) -> float:
+    def calculate_avg_bpm(self, player_logs, players: dict) -> float:
         """
         Calculates the average box plus/minus differential of the players between two teams in a match.
-        :param home_player_logs: Home team's player logs for the match.
-        :param away_player_logs: Away team's player logs for the match.
+        :param players: Dictionary of NbaPlayer objects.
+        :param player_logs: Team's player logs for the match.
         :return: float of the average box plus/minus.
         """
-        # pre_bpm_sum = 0.0
-        # count = 0
-        #
-        # for i in box_score.index[:-1]:  # -1 to exclude team totals.
-        #     player_name = box_score['Players'][i]
-        #     print(f"Fetching {player_name}'s BPM.")
-        #     player_code: str = self.db.scraper.get_player_code(player_name)
-        #     player: NbaPlayer = self.db.get_player(player_code)
-        #     pre_bpm_sum += float(player.bpm)
-        #     count += 1
-        #
-        # return pre_bpm_sum / count
-        raise NotImplementedError
+        pre_bpm_sum = 0.0
+        count = 0
+
+        # TODO: Add support to advanced stats in database.
+        # TODO: Currently this uses a player dict, but make it so that we query instead to reduce our memory usage.
+        for player_log in player_logs:
+            if player_log.minutes_played is None:
+                continue
+
+            player = self.db.get_player_by_player_id(player_log.player_id)
+            player_obj = players.get(player.unique_code)
+            if not player_obj:
+                players[player.unique_code] = NbaPlayer(player.friendly_name, player.unique_code)
+                pre_bpm_sum += float(players[player.unique_code].box_pm)
+            else:
+                pre_bpm_sum += float(player_obj.box_pm)
+            count += 1
+
+        if count == 0:
+            return 0
+
+        return pre_bpm_sum / count
 
     def update_team_features(self, team_obj, team_log) -> None:
         """
