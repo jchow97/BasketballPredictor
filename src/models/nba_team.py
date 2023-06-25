@@ -11,13 +11,6 @@ class NbaTeam:
     the course of a season, divided by the number of games played. This may cause statistical differences
     compared to the basketball-reference data.
     """
-
-    class Node:
-        def __init__(self, val='N/A', next=None, prev=None):
-            self.val = val
-            self.next = next
-            self.prev = prev
-
     def __init__(self, team: str, season: int):
         """
         Constructor for team object used for model training and prediction.
