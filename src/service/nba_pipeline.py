@@ -115,34 +115,6 @@ class NbaPredictor:
         """
         raise NotImplementedError()
 
-    @staticmethod
-    def generate_features_differential(home: NbaTeam, away: NbaTeam) -> list[float]:
-        """
-        Generate the differential between the features of the home team.
-        :param away: Away team object.
-        :param home: Home team object.
-        :return: List of differences for each feature.
-        """
-
-        away_f: list[float] = away.features
-        home_f: list[float] = home.features
-
-        input_data = np.subtract(home_f, away_f)
-        return input_data
-
-    @staticmethod
-    def create_teams(year: int) -> dict:
-        """
-        Creates a dictionary of all current teams, for each year.
-        :param year: Seasons to create teams for.
-        :return: Dictionary of NBA teams (season unique).
-        """
-        teams = {}
-        for team in CURRENT_TEAMS:
-            teams[team] = NbaTeam(team, year)
-            print(f'{team} created.')
-        return teams
-
     def calculate_avg_bpm(self, player_logs, players: dict) -> float:
         """
         Calculates the average box plus/minus differential of the players between two teams in a match.
@@ -173,3 +145,31 @@ class NbaPredictor:
             return 0
 
         return pre_bpm_sum / count
+
+    @staticmethod
+    def generate_features_differential(home: NbaTeam, away: NbaTeam) -> list[float]:
+        """
+        Generate the differential between the features of the home team.
+        :param away: Away team object.
+        :param home: Home team object.
+        :return: List of differences for each feature.
+        """
+
+        away_f: list[float] = away.features
+        home_f: list[float] = home.features
+
+        input_data = np.subtract(home_f, away_f)
+        return input_data
+
+    @staticmethod
+    def create_teams(year: int) -> dict:
+        """
+        Creates a dictionary of all current teams, for each year.
+        :param year: Seasons to create teams for.
+        :return: Dictionary of NBA teams (season unique).
+        """
+        teams = {}
+        for team in CURRENT_TEAMS:
+            teams[team] = NbaTeam(team, year)
+            print(f'{team} created.')
+        return teams
