@@ -1,5 +1,4 @@
 import numpy as np
-from sqlalchemy.engine import Row
 
 from common.constants import CURRENT_TEAMS
 from models.database import GamePlayerLog
@@ -81,8 +80,8 @@ class NbaPredictor:
                                      self.calculate_avg_bpm(away_player_logs, players)))
 
                 # Calculate outcome data.
-                total_points_differential: float = home_team_log.GameTeamLog.total_points - \
-                                                   away_team_log.GameTeamLog.total_points
+                total_points_differential: float = \
+                    home_team_log.GameTeamLog.total_points - away_team_log.GameTeamLog.total_points
 
                 training_input_data.append(features)
                 training_outcome_data.append(total_points_differential)
