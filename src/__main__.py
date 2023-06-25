@@ -15,16 +15,17 @@ def main():
     scraper = Scraper()
     db_service = DatabaseService(session, scraper)
 
-    # db_service.initialize_database()
-    # db_service.populate_tables(2022)
-
-    predictor = NbaPredictor(db_service, [2022])
-    predictor.train_model()
-
-    predictor.run_prediction(2023)
-    result = predictor.check_prediction()
-    print(result)
-    return
+    scraper.scrape_odds_data(2022)
+    # # db_service.initialize_database()
+    # # db_service.populate_tables(2022)
+    #
+    # predictor = NbaPredictor(db_service, [2022])
+    # predictor.train_model()
+    #
+    # predictor.run_prediction(2023)
+    # result = predictor.check_prediction()
+    # print(result)
+    # return
 
 
 if __name__ == "__main__":
