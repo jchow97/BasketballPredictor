@@ -147,8 +147,6 @@ class NbaTeam:
 
         print(f"{self.team_name} features updated.")
 
-        raise NotImplementedError()
-
     def update_last10(self, result: str) -> None:
         """
         Updates the last 10 record for the team with the new result.
