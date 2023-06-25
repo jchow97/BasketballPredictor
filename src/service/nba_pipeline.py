@@ -168,22 +168,8 @@ class NbaPredictor:
                 pre_bpm_sum += float(player_obj.bpm)
             count += 1
 
-            self.update_player_bpm(player_log, players[player.unique_code])
+            players[player.unique_code].update_bpm(player_log)
         if count == 0:
             return 0
 
         return pre_bpm_sum / count
-
-    @staticmethod
-    def update_player_bpm(player_log: GamePlayerLog, player: NbaPlayer) -> None:
-        """
-        For each player in the player logs, update their BPM.
-        :param player: NbaPlayer Object
-        :param player_log: Game Player Log
-        :return: None
-        """
-        player.games_played += 1
-        bpm = player_log.box_plus_minus
-        if bpm is not None:
-            player.bpm_total += float(bpm)
-            player.bpm = player.bpm_total / player.games_played
