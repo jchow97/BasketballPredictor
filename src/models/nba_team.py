@@ -95,15 +95,57 @@ class NbaTeam:
         else:
             self.win_loss_pct = self.wins / self.losses
 
-    def update_team_stats(self, team_box_score: pd.DataFrame, opponent_box_score: pd.DataFrame,
-                          game_summary: pd.DataFrame) -> None:
+    def update_features(self, team_log, opp_team_log) -> None:
         """
-        Updates all features and fields for the team after a game.
-        :param team_box_score: Dataframe of basic and advanced box score for the team.
-        :param opponent_box_score: Dataframe of basic and advanced box score for the opposing team.
-        :param game_summary: Game summary dataframe.
+        Updates the team object's features with the team's stats for the game.
+        :param team_log: Game Team Log data row
+        :param opp_team_log: Opposing team's Game Team Log data row
         :return: None
         """
+
+        self.games += 1
+
+        if float(team_log.GameTeamLog.total_points) > float(opp_team_log.GameTeamLog.total_points):
+            self.wins += 1
+            self.calculate_win_loss_pct()
+            self.update_last10("W")
+        else:
+            self.losses += 1
+            self.calculate_win_loss_pct()
+            self.update_last10("L")
+
+        margin_of_victory = team_log.GameTeamLog.total_points - opp_team_log.GameTeamLog.total_points
+        self.mov_total += margin_of_victory
+        self.mov = self.mov_total / self.games
+
+        self.off_rtg_total += float(team_log.GameTeamLog.offensive_rating)
+        self.off_rtg = self.off_rtg_total / self.games
+
+        self.tov_pct_total += float(team_log.GameTeamLog.turnover_pct)
+        self.tov_pct = self.tov_pct_total / self.games
+
+        self.off_reb_total += float(team_log.GameTeamLog.offensive_rebounds)
+        self.off_reb = self.off_reb_total / self.games
+
+        self.ts_pct_total += float(team_log.GameTeamLog.true_shooting_pct)
+        self.ts_pct = self.ts_pct_total / self.games
+
+        self.def_rtg_total += float(team_log.GameTeamLog.defensive_rating)
+        self.def_rtg = self.def_rtg_total / self.games
+
+        self.def_reb_total += float(team_log.GameTeamLog.defensive_rebounds)
+        self.def_reb = self.def_reb_total / self.games
+
+        self.opp_tov_pct_total += float(opp_team_log.GameTeamLog.turnover_pct)
+        self.opp_tov_pct = self.opp_tov_pct_total / self.games
+
+        self.pace_total += float(team_log.GameTeamLog.pace)
+        self.pace = self.pace_total / self.games
+
+        # Only need to recalculate because add_last10() was already called earlier
+        self.last10_pct = self.calculate_last10()
+
+        print(f"{self.team_name} features updated.")
 
         raise NotImplementedError()
 

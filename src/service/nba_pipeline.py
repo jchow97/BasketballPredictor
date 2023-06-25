@@ -1,5 +1,4 @@
 import numpy as np
-from sqlalchemy.engine import Row
 
 from common.constants import CURRENT_TEAMS
 from models.database import GamePlayerLog
@@ -81,15 +80,15 @@ class NbaPredictor:
                                      self.calculate_avg_bpm(away_player_logs, players)))
 
                 # Calculate outcome data.
-                total_points_differential: float = home_team_log.GameTeamLog.total_points - \
-                                                   away_team_log.GameTeamLog.total_points
+                total_points_differential: float = \
+                    home_team_log.GameTeamLog.total_points - away_team_log.GameTeamLog.total_points
 
                 training_input_data.append(features)
                 training_outcome_data.append(total_points_differential)
 
                 # Update team and player objects.
-                self.update_team_features(home_team_obj, home_team_log, away_team_log)
-                self.update_team_features(away_team_obj, away_team_log, home_team_log)
+                home_team_obj.update_features(home_team_log, away_team_log)
+                away_team_obj.update_features(away_team_log, home_team_log)
 
         return training_input_data, training_outcome_data
 
@@ -115,6 +114,37 @@ class NbaPredictor:
         :return: A dataframe of the odds data for use.
         """
         raise NotImplementedError()
+
+    def calculate_avg_bpm(self, player_logs, players: dict) -> float:
+        """
+        Calculates the average box plus/minus differential of the players between two teams in a match.
+        :param players: Dictionary of NbaPlayer objects.
+        :param player_logs: Team's player logs for the match.
+        :return: float of the average box plus/minus.
+        """
+        pre_bpm_sum = 0.0
+        count = 0
+
+        # TODO: Add support to advanced stats in database.
+        # TODO: Currently this uses a player dict, but make it so that we query instead to reduce our memory usage.
+        for player_log in player_logs:
+            if player_log.minutes_played is None:
+                continue
+
+            player = self.db.get_player_by_player_id(player_log.player_id)
+            player_obj = players.get(player.unique_code)
+            if not player_obj:
+                players[player.unique_code] = NbaPlayer(player.friendly_name, player.unique_code)
+                pre_bpm_sum += float(players[player.unique_code].bpm)
+            else:
+                pre_bpm_sum += float(player_obj.bpm)
+            count += 1
+
+            players[player.unique_code].update_bpm(player_log)
+        if count == 0:
+            return 0
+
+        return pre_bpm_sum / count
 
     @staticmethod
     def generate_features_differential(home: NbaTeam, away: NbaTeam) -> list[float]:
@@ -143,101 +173,3 @@ class NbaPredictor:
             teams[team] = NbaTeam(team, year)
             print(f'{team} created.')
         return teams
-
-    def calculate_avg_bpm(self, player_logs, players: dict) -> float:
-        """
-        Calculates the average box plus/minus differential of the players between two teams in a match.
-        :param players: Dictionary of NbaPlayer objects.
-        :param player_logs: Team's player logs for the match.
-        :return: float of the average box plus/minus.
-        """
-        pre_bpm_sum = 0.0
-        count = 0
-
-        # TODO: Add support to advanced stats in database.
-        # TODO: Currently this uses a player dict, but make it so that we query instead to reduce our memory usage.
-        for player_log in player_logs:
-            if player_log.minutes_played is None:
-                continue
-
-            player = self.db.get_player_by_player_id(player_log.player_id)
-            player_obj = players.get(player.unique_code)
-            if not player_obj:
-                players[player.unique_code] = NbaPlayer(player.friendly_name, player.unique_code)
-                pre_bpm_sum += float(players[player.unique_code].bpm)
-            else:
-                pre_bpm_sum += float(player_obj.bpm)
-            count += 1
-
-            self.update_player_bpm(player_log, players[player.unique_code])
-        if count == 0:
-            return 0
-
-        return pre_bpm_sum / count
-
-    @staticmethod
-    def update_team_features(team, team_log, opp_team_log) -> None:
-        """
-        Updates the team object's features with the team's stats for the game.
-        :param team: Team Object
-        :param team_log: Game Team Log data row
-        :param opp_team_log: Opposing team's Game Team Log data row
-        :return: None
-        """
-        team.games += 1
-
-        if float(team_log.GameTeamLog.total_points) > float(opp_team_log.GameTeamLog.total_points):
-            team.wins += 1
-            team.calculate_win_loss_pct()
-            team.update_last10("W")
-        else:
-            team.losses += 1
-            team.calculate_win_loss_pct()
-            team.update_last10("L")
-
-        margin_of_victory = team_log.GameTeamLog.total_points - opp_team_log.GameTeamLog.total_points
-        team.mov_total += margin_of_victory
-        team.mov = team.mov_total / team.games
-
-        team.off_rtg_total += float(team_log.GameTeamLog.offensive_rating)
-        team.off_rtg = team.off_rtg_total / team.games
-
-        team.tov_pct_total += float(team_log.GameTeamLog.turnover_pct)
-        team.tov_pct = team.tov_pct_total / team.games
-
-        team.off_reb_total += float(team_log.GameTeamLog.offensive_rebounds)
-        team.off_reb = team.off_reb_total / team.games
-
-        team.ts_pct_total += float(team_log.GameTeamLog.true_shooting_pct)
-        team.ts_pct = team.ts_pct_total / team.games
-
-        team.def_rtg_total += float(team_log.GameTeamLog.defensive_rating)
-        team.def_rtg = team.def_rtg_total / team.games
-
-        team.def_reb_total += float(team_log.GameTeamLog.defensive_rebounds)
-        team.def_reb = team.def_reb_total / team.games
-
-        team.opp_tov_pct_total += float(opp_team_log.GameTeamLog.turnover_pct)
-        team.opp_tov_pct = team.opp_tov_pct_total / team.games
-
-        team.pace_total += float(team_log.GameTeamLog.pace)
-        team.pace = team.pace_total / team.games
-
-        # Only need to recalculate because add_last10() was already called earlier
-        team.last10_pct = team.calculate_last10()
-
-        print(f"{team.team_name} features updated.")
-
-    @staticmethod
-    def update_player_bpm(player_log: GamePlayerLog, player: NbaPlayer) -> None:
-        """
-        For each player in the player logs, update their BPM.
-        :param player: NbaPlayer Object
-        :param player_log: Game Player Log
-        :return: None
-        """
-        player.games_played += 1
-        bpm = player_log.box_plus_minus
-        if bpm is not None:
-            player.bpm_total += float(bpm)
-            player.bpm = player.bpm_total / player.games_played
