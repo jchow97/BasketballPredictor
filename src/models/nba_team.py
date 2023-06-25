@@ -1,9 +1,5 @@
 from collections import deque
-
-import pandas as pd
-
 from common.constants import TEAM_ABBRV
-from models.database import Team
 
 
 class NbaTeam:
@@ -65,6 +61,7 @@ class NbaTeam:
         self.last10_pct = self.calculate_last10()
 
         self.features: list[float] = []
+        self.set_features()
 
     def calculate_last10(self) -> float:
         """
@@ -145,7 +142,27 @@ class NbaTeam:
         # Only need to recalculate because add_last10() was already called earlier
         self.last10_pct = self.calculate_last10()
 
+        self.set_features()
+
         print(f"{self.team_name} features updated.")
+
+    def set_features(self) -> None:
+        """
+        Updates the features array with the proper stats.
+        :return:
+        """
+        self.features.clear()
+        self.features.append(self.win_loss_pct)
+        self.features.append(self.mov)
+        self.features.append(self.off_rtg)
+        self.features.append(self.tov_pct)
+        self.features.append(self.off_reb)
+        self.features.append(self.ts_pct)
+        self.features.append(self.def_rtg)
+        self.features.append(self.def_reb)
+        self.features.append(self.opp_tov_pct)
+        self.features.append(self.pace)
+        self.features.append(self.last10_pct)
 
     def update_last10(self, result: str) -> None:
         """
