@@ -17,7 +17,7 @@ class DatabaseService:
         self.session = session
         self.scraper = scraper
         self.__username = 'jeffreychow'
-        self.__database = 'nba_dev'
+        self.__database = 'nba_test'
         self.__port = '5432'
 
     def initialize_database(self) -> None:

@@ -48,7 +48,8 @@ class Scraper:
 
         print(f"Beginning scrape for {season} season.")
         # TODO: (#7) Add the summer months (july, aug, sept) to the months being scraped.
-        months = ["june"]
+        months = ["october", "november", "december", "january", "february", "march", "april", "may", "june"]
+        # months = ["june"]
 
         # List of DataFrame, each df represents one month in the calendar
         schedule = []

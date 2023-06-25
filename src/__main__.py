@@ -6,7 +6,7 @@ from service.nba_pipeline import NbaPredictor
 
 username = 'jeffreychow'
 port = '5432'
-database = 'nba_dev'
+database = 'nba_test'
 
 
 def main():
