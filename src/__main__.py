@@ -19,8 +19,7 @@ def main():
     # db_service.populate_tables(2022)
 
     predictor = NbaPredictor(db_service, [2022])
-    training_input, training_output, input_context = predictor.train_model()
-    predictor.pipeline.fit(training_input, training_output)
+    predictor.train_model()
 
     predictor.run_prediction(2023)
     result = predictor.check_prediction()
