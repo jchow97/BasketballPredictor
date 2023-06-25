@@ -3,19 +3,19 @@ import unittest
 
 class TestDatabaseService(unittest.TestCase):
     def setUp(self):
-        pass
+        raise NotImplementedError
 
     def test_get_season(self):
-        pass
+        raise NotImplementedError
 
     def test_get_game(self):
-        pass
+        raise NotImplementedError
 
     def test_get_team(self):
-        pass
+        raise NotImplementedError
 
     def test_get_player(self):
-        pass
+        raise NotImplementedError
 
 
 if __name__ == "__main__":
