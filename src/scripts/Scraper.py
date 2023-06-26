@@ -6,7 +6,7 @@ from datetime import datetime
 
 from pandas import DataFrame
 
-from src.common.constants import TEAM_ABBRV, MONTHS_ABBRV
+from src.common.constants import MONTHS_ABBRV, CITY_NAME_TO_PROPER
 import time
 
 
@@ -48,7 +48,8 @@ class Scraper:
 
         print(f"Beginning scrape for {season} season.")
         # TODO: (#7) Add the summer months (july, aug, sept) to the months being scraped.
-        months = ["june"]
+        months = ["october", "november", "december", "january", "february", "march", "april", "may", "june"]
+        # months = ["june"]
 
         # List of DataFrame, each df represents one month in the calendar
         schedule = []
@@ -206,7 +207,7 @@ class Scraper:
         try:
             soup = self.send_request(url)
         except HTTPError as e:
-            print("Error occured!")
+            print("Error occurred!")
             print(e)
         else:
             pg_stats = soup.find(id='per_game')
@@ -239,6 +240,47 @@ class Scraper:
 
             return pg_stats_df
 
+    def scrape_odds_data(self, year: int, url=None) -> pd.DataFrame:
+        # Ensure the input is an integer
+        try:
+            year = int(year)
+        except ValueError:
+            raise ValueError("Please enter a valid year.")
+
+        # Format the year string
+        year_string = f"{year - 1}-{str(year)[2:]}"
+
+        if url is None:
+            url = f"https://www.sportsbookreviewsonline.com/scoresoddsarchives/nba-odds-{year_string}/"
+
+        try:
+            soup = self.send_request(url)
+        except HTTPError as e:
+            print("Error occurred!")
+            print(e)
+        else:
+            # headers = [td.get_text() for td in soup.find_all('tr', limit=2)[0] if td != '\n']
+            headers = ['Date', 'Visitor_Team', 'Home_Team', 'Closing Odds']
+            table = [[td.get_text() for td in tr if td != '\n'] for tr in soup.find_all('tr')[1:]]
+            data = []
+            for i in range(0, len(table), 2):
+                date = self.odds_to_postgres_date(table[i][0], year)
+                visitor_team = CITY_NAME_TO_PROPER[table[i][3]]
+                home_team = CITY_NAME_TO_PROPER[table[i+1][3]]
+                odds_v = self.convert_to_float_or_zero(table[i][10])
+                odds_h = self.convert_to_float_or_zero(table[i + 1][10])
+
+                if odds_v < odds_h:
+                    odds = float(odds_v)
+                else:
+                    odds = -abs(float(odds_h))
+
+                data.append([date, visitor_team, home_team, odds])
+
+            odds_df = pd.DataFrame(data, columns=headers)
+
+            return odds_df
+
     # HELPER FUNCTIONS
 
     def send_request(self, url) -> BeautifulSoup or None:
@@ -252,6 +294,18 @@ class Scraper:
             return None
 
         return BeautifulSoup(html.text, 'lxml')
+
+    @staticmethod
+    def convert_to_float_or_zero(s: str) -> float:
+        """
+        Converts the string to a float if possible, otherwise returns 0.0
+        :param s: Input string
+        :return: Float
+        """
+        try:
+            return float(s)
+        except ValueError:
+            return 0.0
 
     @staticmethod
     def to_postgres_date(date_str: str) -> str:
@@ -279,6 +333,27 @@ class Scraper:
         formatted_time = datetime.strptime(time_str, '%I:%M%p').time()
 
         return datetime.combine(formatted_date, formatted_time).strftime('%Y-%m-%d %H:%M:%S')
+
+    @staticmethod
+    def odds_to_postgres_date(date_string: str, year) -> str:
+        """
+        Converts the date of odds data (e.g. 1019) to Postgres date format.
+        :param date_string: Odds data date.
+        :param year:
+        :return: Postgres date.
+        """
+        if len(date_string) == 4:
+            month = int(date_string[:2])
+            day = int(date_string[2:])
+
+        if len(date_string) == 3:
+            month = int(date_string[:1])
+            day = int(date_string[1:])
+
+        if month > 8:
+            year -= 1
+
+        return f"{year}-{month:02d}-{day:02d}"
 
     @staticmethod
     def parse_table_rows(table, mode=0) -> []:

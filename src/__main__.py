@@ -1,3 +1,4 @@
+import pandas as pd
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from service.database_service import DatabaseService
@@ -6,7 +7,7 @@ from service.nba_pipeline import NbaPredictor
 
 username = 'jeffreychow'
 port = '5432'
-database = 'nba_dev'
+database = 'nba_test'
 
 
 def main():
@@ -15,16 +16,17 @@ def main():
     scraper = Scraper()
     db_service = DatabaseService(session, scraper)
 
-    # db_service.initialize_database()
-    # db_service.populate_tables(2022)
-
-    predictor = NbaPredictor(db_service, [2022])
-    predictor.train_model()
-
-    predictor.run_prediction(2023)
-    result = predictor.check_prediction()
-    print(result)
-    return
+    # # db_service.initialize_database()
+    # # db_service.populate_tables(2022)
+    odds_data: pd.DataFrame = scraper.scrape_odds_data(2022)
+    db_service.add_odds_data(odds_data)
+    # predictor = NbaPredictor(db_service, [2022])
+    # predictor.train_model()
+    #
+    # predictor.run_prediction(2023)
+    # result = predictor.check_prediction()
+    # print(result)
+    # return
 
 
 if __name__ == "__main__":

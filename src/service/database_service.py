@@ -1,6 +1,5 @@
 from datetime import datetime
 from typing import Type
-
 import pandas as pd
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
@@ -17,7 +16,7 @@ class DatabaseService:
         self.session = session
         self.scraper = scraper
         self.__username = 'jeffreychow'
-        self.__database = 'nba_dev'
+        self.__database = 'nba_test'
         self.__port = '5432'
 
     def initialize_database(self) -> None:
@@ -485,6 +484,18 @@ class DatabaseService:
         self.session.flush()
         return game
 
+    def add_odds_data(self, odds_data: pd.DataFrame) -> None:
+        # Find game
+        for index, row in odds_data.iterrows():
+            game: Game = self.get_game_by_date_and_teams(row['Date'], row['Home_Team'], row['Visitor_Team'])
+
+            if game is None:
+                print(f"{row['Visitor_Team']} @ {row['Home_Team']} on {row['Date']} was not found. Skipping")
+                continue
+
+            game.spread = row['Closing Odds']
+            self.session.commit()
+
     def get_seasons_by_years(self, years: list[int]) -> list[Season]:
         """
         Combines various season schedules from the database and returns as one giant schedule, ordered by game time.
@@ -527,6 +538,49 @@ class DatabaseService:
         :return: TODO
         """
         raise NotImplementedError
+
+    def get_game_by_date_and_teams(self, date, home, away) -> Game:
+        """
+        Retrieves a game from the database by the date and the home and away teams.
+        :param date: Date string
+        :param home: Home Team Name
+        :param away: Away Team Name
+        :return: Game object.
+        """
+        date_split = date.split('-')
+        year = int(date_split[0])
+        month = int(date_split[1])
+        day = int(date_split[2])
+
+        if month > 8:
+            query_year = year + 1
+        else:
+            query_year = year
+
+        date_range_start = datetime(year, month, day)
+        date_range_end = datetime(year, month, day, 23, 59, 59)
+        home_team = self.session\
+            .query(Team, Season)\
+            .where(Team.name == home)\
+            .where(Season.year == str(query_year))\
+            .where(Team.season_id == Season.id)\
+            .one()
+
+        away_team = self.session\
+            .query(Team, Season)\
+            .where(Team.name == away)\
+            .where(Season.year == str(query_year))\
+            .where(Team.season_id == Season.id)\
+            .one()
+
+        game = self.session\
+            .query(Game)\
+            .where(Game.start_datetime >= date_range_start, Game.start_datetime <= date_range_end)\
+            .where(Game.home_team_id == home_team.Team.id)\
+            .where(Game.away_team_id == away_team.Team.id)\
+            .one_or_none()
+
+        return game
 
     def get_team_by_name_and_season_id(self, team: str, season_id: int) -> Team:
         """
