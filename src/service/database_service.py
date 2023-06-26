@@ -485,6 +485,10 @@ class DatabaseService:
         self.session.flush()
         return game
 
+    def add_odds_data(self, odds_data: pd.DataFrame) -> None:
+        # Find game
+        game = self.get_game_by_date_and_teams()
+
     def get_seasons_by_years(self, years: list[int]) -> list[Season]:
         """
         Combines various season schedules from the database and returns as one giant schedule, ordered by game time.

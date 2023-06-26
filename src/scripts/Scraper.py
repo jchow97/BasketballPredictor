@@ -264,7 +264,7 @@ class Scraper:
             table = [[td.get_text() for td in tr if td != '\n'] for tr in soup.find_all('tr')[1:]]
             data = []
             for i in range(0, len(table), 2):
-                date = table[i][0]
+                date = self.odds_to_postgres_date(table[i][0], year)
                 visitor_team = table[i][3]
                 home_team = table[i+1][3]
                 odds_v = self.convert_to_float_or_zero(table[i][10])
@@ -333,6 +333,27 @@ class Scraper:
         formatted_time = datetime.strptime(time_str, '%I:%M%p').time()
 
         return datetime.combine(formatted_date, formatted_time).strftime('%Y-%m-%d %H:%M:%S')
+
+    @staticmethod
+    def odds_to_postgres_date(date_string: str, year) -> str:
+        """
+        Converts the date of odds data (e.g. 1019) to Postgres date format.
+        :param date_string: Odds data date.
+        :param year:
+        :return: Postgres date.
+        """
+        if len(date_string) == 4:
+            month = int(date_string[:2])
+            day = int(date_string[2:])
+
+        if len(date_string) == 3:
+            month = int(date_string[:1])
+            day = int(date_string[1:])
+
+        if month > 8:
+            year -= 1
+
+        return f"{year}-{month:02d}-{day:02d}"
 
     @staticmethod
     def parse_table_rows(table, mode=0) -> []:
