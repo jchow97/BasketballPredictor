@@ -156,7 +156,7 @@ class NbaPredictor:
         win_loss_pct = float(correct) / (float(correct) + float(incorrect))
         print(f"Correct: {correct} ; Incorrect: {incorrect} ; Push: {push} ; Did Not Predict: {dnp}.")
         print(f"Win Correctness: {win_correctness} (Includes pushes in total count, but not as wins; does not include "
-              f"DNPs.")
+              f"DNPs)")
         print(f"Win Loss Percentage: {win_loss_pct} (Does not include pushes or DNP)")
 
     def check_prediction(self):
