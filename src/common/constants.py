@@ -97,3 +97,38 @@ CURRENT_TEAMS = (
     'Toronto Raptors',
     'Utah Jazz',
     'Washington Wizards')
+
+# Current teams only. Golden state is duped because of bad data.
+CITY_NAME_TO_PROPER = {
+    'Atlanta': 'Atlanta Hawks',
+    'Boston': 'Boston Celtics',
+    'Brooklyn': 'Brooklyn Nets',
+    'Charlotte': 'Charlotte Hornets',
+    'Chicago': 'Chicago Bulls',
+    'Cleveland': 'Cleveland Cavaliers',
+    'Dallas': 'Dallas Mavericks',
+    'Denver': 'Denver Nuggets',
+    'Detroit': 'Detroit Pistons',
+    'Houston': 'Houston Rockets',
+    'Indiana': 'Indiana Pacers',
+    'LALakers': 'Los Angeles Lakers',
+    'LAClippers': 'Los Angeles Clippers',
+    'Memphis': 'Memphis Grizzlies',
+    'Miami': 'Miami Heat',
+    'Milwaukee': 'Milwaukee Bucks',
+    'Minnesota': 'Minnesota Timberwolves',
+    'NewOrleans': 'New Orleans Pelicans',
+    'NewYork': 'New York Knicks',
+    'GoldenState': 'Golden State Warriors',
+    'Golden State': 'Golden State Warriors',
+    'OklahomaCity': 'Oklahoma City Thunder',
+    'Orlando': 'Orlando Magic',
+    'Philadelphia': 'Philadelphia 76ers',
+    'Phoenix': 'Phoenix Suns',
+    'Portland': 'Portland Trail Blazers',
+    'Sacramento': 'Sacramento Kings',
+    'SanAntonio': 'San Antonio Spurs',
+    'Toronto': 'Toronto Raptors',
+    'Utah': 'Utah Jazz',
+    'Washington': 'Washington Wizards'
+}

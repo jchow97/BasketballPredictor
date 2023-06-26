@@ -6,7 +6,7 @@ from datetime import datetime
 
 from pandas import DataFrame
 
-from src.common.constants import MONTHS_ABBRV
+from src.common.constants import MONTHS_ABBRV, CITY_NAME_TO_PROPER
 import time
 
 
@@ -265,8 +265,8 @@ class Scraper:
             data = []
             for i in range(0, len(table), 2):
                 date = self.odds_to_postgres_date(table[i][0], year)
-                visitor_team = table[i][3]
-                home_team = table[i+1][3]
+                visitor_team = CITY_NAME_TO_PROPER[table[i][3]]
+                home_team = CITY_NAME_TO_PROPER[table[i+1][3]]
                 odds_v = self.convert_to_float_or_zero(table[i][10])
                 odds_h = self.convert_to_float_or_zero(table[i + 1][10])
 
