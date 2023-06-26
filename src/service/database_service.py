@@ -662,3 +662,7 @@ class DatabaseService:
             .all()
 
         return query
+
+    def get_spread_by_game_code(self, game_code: str) -> float | None:
+        query: tuple = self.session.query(Game.spread).where(Game.game_code == game_code).one_or_none()
+        return query[0]

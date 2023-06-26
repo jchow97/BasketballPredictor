@@ -1,4 +1,7 @@
+import os
+
 import numpy as np
+import pandas as pd
 
 from common.constants import CURRENT_TEAMS
 from models.database import GamePlayerLog
@@ -34,30 +37,24 @@ class NbaPredictor:
         Trains the logistic regression model using the specified training years.
         :return: TODO (not sure what `pipeline.fit` returns.).
         """
-
-        """
-        Pseudocode: How model training works.
-            1. 2d array of input (features) -> actual outcome
-                [features] -> pt_differential (home - away)
-            2. run pipeline.fit(training_input_data, training_output_data)
-            
-        """
-        training_input_data, training_output_data = self.generate_training_data()
+        training_input_data, training_output_data, game_codes = self.generate_data(self.training_years)
         # Train model
         self.pipeline.fit(training_input_data, training_output_data)
 
-    def generate_training_data(self) -> tuple[list[list[float]], list[float]]:
+    def generate_data(self, years: list[int]) -> tuple[list[list[float]], list[float], list[str]]:
         """
-        Generates training data to train nba model.
-        :return: Training input data (2d array) and training outcome data (array)
+        Generates input data to model training and predictions
+        :param years: list of seasons
+        :return: Input features (2d array), actual outcome data (array), corresponding game code (array)
         """
-        training_input_data = []
-        training_outcome_data = []
+        pipeline_inputs = []
+        actual_outcomes = []
+        corresponding_matches = []
 
-        for year in self.training_years:
+        for year in years:
             season = self.db.get_season_by_year(year)
             schedule = self.db.get_games_by_season_id(season.id)
-            teams = self.create_teams(year)
+            teams: dict = self.create_teams(year)
             players: dict[NbaPlayer] = {}
             for match in schedule:
                 # Get team game logs from database.
@@ -83,26 +80,88 @@ class NbaPredictor:
                 total_points_differential: float = \
                     home_team_log.GameTeamLog.total_points - away_team_log.GameTeamLog.total_points
 
-                training_input_data.append(features)
-                training_outcome_data.append(total_points_differential)
+                pipeline_inputs.append(features)
+                actual_outcomes.append(total_points_differential)
+                corresponding_matches.append(match.game_code)
 
                 # Update team and player objects.
                 home_team_obj.update_features(home_team_log, away_team_log)
                 away_team_obj.update_features(away_team_log, home_team_log)
 
-        return training_input_data, training_outcome_data
+        return pipeline_inputs, actual_outcomes, corresponding_matches
 
-    def run_prediction(self, year: int):
+    def run_prediction_for_season(self, year: int):
         """
-        Predicts a season of the NBA using a trained model.
+        Predicts a season of the NBA using a trained model; used for prediction accuracy.
         :param year: Season year (2021-2022 is 2022).
-        :return:
+        :return: None
         """
-        raise NotImplementedError()
+        # Initialize counters
+        correct, incorrect, push, dnp = 0, 0, 0, 0
+        results = []
+
+        prediction_inputs, actual_outcomes, game_codes = self.generate_data([year])
+        predictions = self.pipeline.predict(prediction_inputs)
+
+        if len(predictions) != len(actual_outcomes):
+            raise ValueError("List lengths should be the same")
+
+        for i in range(len(predictions)):
+            odds: float | None = self.db.get_spread_by_game_code(game_codes[i])
+            if odds is None:
+                dnp += 1  # no odds: do not count prediction.
+                continue
+
+            # Predict home team wins by more than the oddsmakers. We bet the home team spread.
+            # TODO: double check that this math is correct (i.e. Positives and negatives).
+            res = [predictions[i], actual_outcomes[i], odds, game_codes[i]]
+            print(f"{i}: {game_codes[i]}")
+            if predictions[i] < odds:
+                if actual_outcomes[i] < odds:
+                    correct += 1
+                    res.append("Correct")
+                elif actual_outcomes[i] > odds:
+                    incorrect += 1
+                    res.append("Incorrect")
+                else:
+                    push += 1
+                    res.append("Push")
+            elif predictions[i] > odds:
+                if actual_outcomes[i] < odds:
+                    incorrect += 1
+                    res.append("Incorrect")
+                elif actual_outcomes[i] > odds:
+                    correct += 1
+                    res.append("Correct")
+                else:
+                    push += 1
+                    res.append("Push")
+            else:
+                dnp += 1
+                continue
+
+            results.append(res)
+
+        results_summary = pd.DataFrame(data=results,
+                                       columns=['Prediction', 'Actual Point Difference', 'Closing Odds',
+                                                'Prediction Outcome', 'Game Code'])
+        outname = f'{year}_prediction.csv'
+        outdir = './data'
+        if not os.path.exists(outdir):
+            os.mkdir(outdir)
+        fullname = os.path.join(outdir, outname)
+        results_summary.to_csv(fullname)
+
+        win_correctness = float(correct) / (float(correct) + float(incorrect) + float(push))
+        win_loss_pct = float(correct) / (float(correct) + float(incorrect))
+        print(f"Correct: {correct} ; Incorrect: {incorrect} ; Push: {push} ; Did Not Predict: {dnp}.")
+        print(f"Win Correctness: {win_correctness} (Includes pushes in total count, but not as wins; does not include "
+              f"DNPs)")
+        print(f"Win Loss Percentage: {win_loss_pct} (Does not include pushes or DNP)")
 
     def check_prediction(self):
         """
-        Checks prediction against odds data for prediction accuracy.
+        Checks prediction based on odds data against outcome data for prediction accuracy.
         :return: Prediction accuracy
         """
         raise NotImplementedError()
