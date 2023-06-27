@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Type
 import pandas as pd
 from sqlalchemy import create_engine
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 from sqlalchemy.engine.row import Row
 from common.constants import CURRENT_TEAMS, TEAM_ABBRV
@@ -12,24 +13,19 @@ from scripts.Scraper import Scraper
 
 
 class DatabaseService:
-    def __init__(self, session: Session, scraper: Scraper):
+    def __init__(self, session: Session, scraper: Scraper, engine: Engine):
         self.session = session
         self.scraper = scraper
-        self.__username = 'jeffreychow'
-        self.__database = 'nba_test'
-        self.__port = '5432'
+        self.engine = engine
 
     def initialize_database(self) -> None:
         """
         Create the database and create the tables based on the mapped classes.
         :return: None
         """
-
-        engine = create_engine(f'postgresql+psycopg2://{self.__username}:@localhost:{self.__port}/{self.__database}')
-
         # Create tables.
-        Base.metadata.drop_all(engine)
-        Base.metadata.create_all(engine)
+        Base.metadata.drop_all(self.engine)
+        Base.metadata.create_all(self.engine)
 
     def populate_tables(self, year: int) -> None:
         """
