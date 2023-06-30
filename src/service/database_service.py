@@ -1,7 +1,6 @@
 from datetime import datetime
 from typing import Type
 import pandas as pd
-from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 from sqlalchemy.engine.row import Row
