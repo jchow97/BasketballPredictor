@@ -3,6 +3,8 @@ from models.nba_match import NbaMatch
 
 class NbaSeason:
     """
+    This class is currently not used.
+
     NBA Season Object.
     """
 
