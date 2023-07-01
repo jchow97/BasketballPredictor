@@ -7,7 +7,7 @@ from models.nba_team import NbaTeam
 class TestNbaTeam(TestCase):
 
     def setUp(self):
-        self.test_team = NbaTeam("Portland Trail Blazers", 2000)
+        self.test_team = NbaTeam("Test Team", 2000)
 
     def test_calculate_last10_success(self):
         # set up

@@ -20,7 +20,6 @@ class NbaTeam:
         # Team Details
         self.team_name = team
         self.season = season
-        self.team_abbrv = TEAM_ABBRV[self.team_name]
 
         # Features
         self.win_loss_pct = 0.0
