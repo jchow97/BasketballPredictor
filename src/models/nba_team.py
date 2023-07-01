@@ -83,7 +83,7 @@ class NbaTeam:
         elif self.losses == 0:
             self.win_loss_pct = 1.0
         else:
-            self.win_loss_pct = self.wins / self.losses
+            self.win_loss_pct = self.wins / (self.wins + self.losses)
 
     def update_features(self, team_log, opp_team_log) -> None:
         """
