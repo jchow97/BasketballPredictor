@@ -20,7 +20,6 @@ class NbaTeam:
         # Team Details
         self.team_name = team
         self.season = season
-        self.team_abbrv = TEAM_ABBRV[self.team_name]
 
         # Features
         self.win_loss_pct = 0.0
@@ -83,7 +82,7 @@ class NbaTeam:
         elif self.losses == 0:
             self.win_loss_pct = 1.0
         else:
-            self.win_loss_pct = self.wins / self.losses
+            self.win_loss_pct = self.wins / (self.wins + self.losses)
 
     def update_features(self, team_log, opp_team_log) -> None:
         """
