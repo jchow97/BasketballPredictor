@@ -1,5 +1,5 @@
-from collections import deque
 from unittest import TestCase
+from unittest.mock import patch, PropertyMock
 
 from models.nba_team import NbaTeam
 
@@ -58,11 +58,45 @@ class TestNbaTeam(TestCase):
 
         self.assertEqual(0.0, self.test_team.win_loss_pct)
 
-    # TODO: Mocking candidate
-    # def test_update_features(self):
-    #     # test_team_log
-    #     # test_opp_log
-    #     self.fail()
+    @patch('models.nba_team.Row')
+    @patch('models.nba_team.Row')
+    def test_update_features(self, mock_team_log, mock_opp_log):
+        # Mock logs
+        type(mock_team_log).GameTeamLog = PropertyMock()
+        type(mock_opp_log).GameTeamLog = PropertyMock()
+
+        type(mock_team_log).GameTeamLog.total_points = 100
+        type(mock_team_log).GameTeamLog.offensive_rating = 101
+        type(mock_team_log).GameTeamLog.turnover_pct = 0.12
+        type(mock_team_log).GameTeamLog.offensive_rebounds = 13
+        type(mock_team_log).GameTeamLog.true_shooting_pct = 0.4
+        type(mock_team_log).GameTeamLog.defensive_rating = 105
+        type(mock_team_log).GameTeamLog.defensive_rebounds = 16
+        type(mock_team_log).GameTeamLog.pace = 107
+
+        type(mock_opp_log).GameTeamLog.total_points = 90
+        type(mock_opp_log).GameTeamLog.offensive_rating = 91
+        type(mock_opp_log).GameTeamLog.turnover_pct = 0.09
+        type(mock_opp_log).GameTeamLog.offensive_rebounds = 9
+        type(mock_opp_log).GameTeamLog.true_shooting_pct = 0.39
+        type(mock_opp_log).GameTeamLog.defensive_rating = 99
+        type(mock_opp_log).GameTeamLog.defensive_rebounds = 9
+        type(mock_opp_log).GameTeamLog.pace = 99
+
+        self.test_team.update_features(mock_team_log, mock_opp_log)
+
+        self.assertEqual(1, self.test_team.wins)
+        self.assertEqual(10, self.test_team.mov)
+        self.assertEqual(101, self.test_team.off_rtg)
+        self.assertEqual(0.12, self.test_team.tov_pct)
+        self.assertEqual(13, self.test_team.off_reb)
+        self.assertEqual(0.4, self.test_team.ts_pct)
+        self.assertEqual(105, self.test_team.def_rtg)
+        self.assertEqual(16, self.test_team.def_reb)
+        self.assertEqual(0.09, self.test_team.opp_tov_pct)
+        self.assertEqual(107, self.test_team.pace)
+        self.assertEqual(1.0, self.test_team.win_loss_pct)
+        self.assertEqual(1.0, self.test_team.last10_pct)
 
     def test_set_features(self):
         self.test_team.win_loss_pct = 0.1
