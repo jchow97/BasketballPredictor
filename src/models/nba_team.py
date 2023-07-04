@@ -1,4 +1,7 @@
 from collections import deque
+
+from sqlalchemy.engine import Row
+
 from common.constants import TEAM_ABBRV
 
 
@@ -84,7 +87,7 @@ class NbaTeam:
         else:
             self.win_loss_pct = self.wins / (self.wins + self.losses)
 
-    def update_features(self, team_log, opp_team_log) -> None:
+    def update_features(self, team_log: Row, opp_team_log: Row) -> None:
         """
         Updates the team object's features with the team's stats for the game.
         :param team_log: Game Team Log data row
