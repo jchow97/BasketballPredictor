@@ -1,5 +1,5 @@
 from unittest import TestCase
-from unittest.mock import Mock, patch, PropertyMock, MagicMock
+from unittest.mock import patch, PropertyMock
 
 from models.nba_team import NbaTeam
 
@@ -62,9 +62,6 @@ class TestNbaTeam(TestCase):
     @patch('models.nba_team.Row')
     def test_update_features(self, mock_team_log, mock_opp_log):
         # Mock logs
-        mock_team_log = MagicMock()
-        mock_opp_log = MagicMock()
-
         type(mock_team_log).GameTeamLog = PropertyMock()
         type(mock_opp_log).GameTeamLog = PropertyMock()
 
