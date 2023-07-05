@@ -526,13 +526,18 @@ class DatabaseService:
 
         return query
 
-    def get_game_by_game_code(self, game_code: str) -> Game:
+    def get_game_by_game_code(self, game_code: str) -> list[Game]:
         """
         Retrieves a game from the database.
         :param game_code: Unique game code
-        :return: TODO
+        :return: List of games
         """
-        raise NotImplementedError
+        query: list[Game] = self.session \
+            .query(Game) \
+            .where(Game.game_code == game_code) \
+            .all()
+
+        return query
 
     def get_game_by_date_and_teams(self, date, home, away) -> Game:
         """
@@ -592,7 +597,7 @@ class DatabaseService:
 
         if query is None:
             # TODO: Handle none case.
-            raise NotImplementedError()
+            pass
 
         return query
 
@@ -613,7 +618,7 @@ class DatabaseService:
 
         return query[0], query[1]
 
-    def get_player_by_player_id(self, player_id: str) -> Type[NotImplementedError] | Player:
+    def get_player_by_player_id(self, player_id: int) -> Type[NotImplementedError] | Player:
         """
         Retrieves a player from the database.
         :param player_id: Player id
@@ -629,7 +634,7 @@ class DatabaseService:
 
         return query
 
-    def get_player_stats_by_player_id(self, player_id: str) -> PlayerStats:
+    def get_player_stats_by_player_id(self, player_id: int) -> PlayerStats:
         """
         Retrieves a player's most recently-played season stats (this may change).
         :param player_id: Unique player id.
@@ -659,5 +664,8 @@ class DatabaseService:
         return query
 
     def get_spread_by_game_code(self, game_code: str) -> float | None:
-        query: tuple = self.session.query(Game.spread).where(Game.game_code == game_code).one_or_none()
+        query: tuple = self.session\
+            .query(Game.spread)\
+            .where(Game.game_code == game_code)\
+            .one_or_none()
         return query[0]
