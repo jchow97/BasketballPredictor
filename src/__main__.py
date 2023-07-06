@@ -12,8 +12,9 @@ database = 'nba_test'
 
 def main():
     # Set Parameters
-    training_years = [2022]
-    prediction_year = 2022
+    scrape_years = [2017, 2018, 2019, 2021, 2022, 2023]
+    training_years = [2017, 2018, 2019, 2021, 2022]
+    prediction_year = 2023
 
     engine = create_engine(f'postgresql+psycopg2://{username}:@localhost:{port}/{database}')
     session = Session(engine)
@@ -22,9 +23,12 @@ def main():
 
     # Scraper-related methods
     db_service.initialize_database()
-    db_service.populate_tables(2022)
-    # odds_data: pd.DataFrame = scraper.scrape_odds_data(2022)
-    # db_service.add_odds_data(odds_data)
+    for year in scrape_years:
+        db_service.populate_tables(year)
+        odds_data: pd.DataFrame = scraper.scrape_odds_data(year)
+        if odds_data is None:
+            continue
+        db_service.add_odds_data(odds_data)
 
     predictor = NbaPredictor(db_service, training_years)
     predictor.train_model()

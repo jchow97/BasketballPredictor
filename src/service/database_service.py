@@ -38,11 +38,17 @@ class DatabaseService:
         teams = self.add_teams(season.id)
 
         for i in schedule_df.index:
+            if teams.get(schedule_df['Home/Neutral'][i], None) is None:
+                continue
             home_team = teams[schedule_df['Home/Neutral'][i]]
             away_team = teams[schedule_df['Visitor/Neutral'][i]]
             game = self.add_game(schedule_df, i, season, home_team, away_team)
 
             game_summary, home_box, away_box = self.scraper.scrape_nba_match(game.game_code)
+
+            if game_summary is None:
+                continue
+
             home_box_team_stats = home_box.iloc[-1]
             home_team_game_summary = game_summary.iloc[1]
             away_box_team_stats = away_box.iloc[-1]
@@ -363,10 +369,17 @@ class DatabaseService:
         :param player_code: Player's unique identifier.
         :return: Newly created Player object.
         """
+        split_name = player_name.split()
+        first_name = split_name[0]
+        if len(split_name) > 1:
+            last_name = split_name[1]
+        else:
+            last_name = None
+
         player = Player(
             unique_code=player_code,
-            first_name=player_name.split()[0],
-            last_name=player_name.split()[1],
+            first_name=first_name,
+            last_name=last_name,
             friendly_name=player_name
         )
 
