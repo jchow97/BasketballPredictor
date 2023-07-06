@@ -535,6 +535,7 @@ class DatabaseService:
         query: list[Game] = self.session\
             .query(Game)\
             .where(Game.season_id == season_id)\
+            .order_by(Game.start_datetime.asc())\
             .all()
 
         return query

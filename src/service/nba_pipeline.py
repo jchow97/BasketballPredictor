@@ -56,7 +56,13 @@ class NbaPredictor:
             schedule = self.db.get_games_by_season_id(season.id)
             teams: dict = self.create_teams(year)
             players: dict[NbaPlayer] = {}
+            count = 0
             for match in schedule:
+                # if count <= 30:
+                #     count += 1
+                #     continue
+                if count > 1230:
+                    break
                 # Get team game logs from database.
                 home_team_log, away_team_log = self.db.get_team_logs_by_game_id(match.id)
 
@@ -87,6 +93,8 @@ class NbaPredictor:
                 # Update team and player objects.
                 home_team_obj.update_features(home_team_log, away_team_log)
                 away_team_obj.update_features(away_team_log, home_team_log)
+
+                count += 1
 
         return pipeline_inputs, actual_outcomes, corresponding_matches
 
