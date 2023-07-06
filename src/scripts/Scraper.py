@@ -48,8 +48,7 @@ class Scraper:
 
         print(f"Beginning scrape for {season} season.")
         # TODO: (#7) Add the summer months (july, aug, sept) to the months being scraped.
-        months = ["october", "november", "december", "january", "february", "march", "april", "may", "june"]
-        # months = ["june"]
+        months = ["october", "november", "december", "january", "february", "march", "april", "may", "june", "july"]
 
         # List of DataFrame, each df represents one month in the calendar
         schedule = []
@@ -59,11 +58,14 @@ class Scraper:
             try:
                 url = f"https://www.basketball-reference.com/leagues/NBA_{season}_games-{month}.html"
                 soup = self.send_request(url)
+
+                if soup is None:
+                    continue
             except HTTPError as e:
                 print("An HTTPError occurred!")
                 print(e)
                 # TODO: (#8) Add exception handling to Scraper class
-                return None
+                continue
             else:
                 # Extract headers into a list. Expected headers:
                 # ['Date', 'Start (ET)', 'Visitor/Neutral', 'PTS', 'Home/Neutral', 'PTS', '\xa0', '\xa0', 'Attend.',
@@ -91,7 +93,7 @@ class Scraper:
             print(f"Failed to scrape {season} schedule.")
             return None
 
-    def scrape_nba_match(self, game_code, url=None) -> tuple[DataFrame, DataFrame, DataFrame]:
+    def scrape_nba_match(self, game_code, url=None) -> tuple[DataFrame, DataFrame, DataFrame] | None:
         """
         Scrape the nba match and returns a collection of data frames from the match.
         :param game_code: Unique game code string for the website.
@@ -104,6 +106,11 @@ class Scraper:
                 url = f'https://www.basketball-reference.com/boxscores/{game_code}.html'
 
             soup = self.send_request(url)
+
+            if soup is None:
+                print("Something went wrong, can't scrape match.")
+                return None
+
         except HTTPError as e:
             print("Error occurred!")
             print(e)
@@ -206,6 +213,11 @@ class Scraper:
 
         try:
             soup = self.send_request(url)
+
+            if soup is None:
+                print("This guy isn't important enough to scrape.")
+                return None
+
         except HTTPError as e:
             print("Error occurred!")
             print(e)
@@ -240,7 +252,7 @@ class Scraper:
 
             return pg_stats_df
 
-    def scrape_odds_data(self, year: int, url=None) -> pd.DataFrame:
+    def scrape_odds_data(self, year: int, url=None) -> pd.DataFrame | None:
         # Ensure the input is an integer
         try:
             year = int(year)
@@ -255,6 +267,11 @@ class Scraper:
 
         try:
             soup = self.send_request(url)
+
+            if soup is None:
+                print("Something went wrong, can't scrape match.")
+                return None
+
         except HTTPError as e:
             print("Error occurred!")
             print(e)
