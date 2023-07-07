@@ -58,9 +58,9 @@ class NbaPredictor:
             players: dict[NbaPlayer] = {}
             count = 0
             for match in schedule:
-                # if count <= 30:
-                #     count += 1
-                #     continue
+                if count <= 300:
+                    count += 1
+                    continue
                 if count > 1230:
                     break
                 # Get team game logs from database.
@@ -151,8 +151,8 @@ class NbaPredictor:
             results.append(res)
 
         results_summary = pd.DataFrame(data=results,
-                                       columns=['Prediction', 'Actual Point Difference', 'Closing Odds',
-                                                'Prediction Outcome', 'Game Code'])
+                                       columns=['Prediction', 'Actual Point Difference', 'Closing Odds', 'Game Code',
+                                                'Prediction Outcome'])
         outname = f'{year}_prediction.csv'
         outdir = './data'
         if not os.path.exists(outdir):
@@ -240,3 +240,58 @@ class NbaPredictor:
             teams[team] = NbaTeam(team, year)
             print(f'{team} created.')
         return teams
+
+    def check_profit(self, data_path: str, initial_bankroll: float, unit_pct: float, min_unit: float):
+        """
+        Checks the result csv for profit based on specified initial bankroll and bankroll percentage
+        :param data_path: File path for predictions
+        :param initial_bankroll: Initial Starting Money
+        :param unit_pct: Wager amount per game (percentage of bankroll to bet)
+        :param min_unit: Minimum bet amount.
+        :return:
+        """
+        predictions = pd.read_csv(data_path, header=0, index_col=0)
+        bankroll = initial_bankroll
+        daily_starting_bankroll = []
+        minimum_bankroll = initial_bankroll
+        maximum_bankroll = 0
+        current_day = predictions.iloc[0]["Game Code"][:8]
+        today_bankroll = initial_bankroll
+
+        for index, row in predictions.iterrows():
+            game_day = row["Game Code"][:8]
+
+            if game_day != current_day:
+                current_day = game_day
+                today_bankroll = bankroll
+
+            bet_amount = max(today_bankroll * unit_pct, min_unit)
+            if row["Prediction Outcome"] == "Correct":
+                bankroll += ((bet_amount * 1.90) - bet_amount)
+            elif row["Prediction Outcome"] == "Incorrect":
+                bankroll -= bet_amount
+            daily_starting_bankroll.append(today_bankroll)
+
+            maximum_bankroll = max(today_bankroll, maximum_bankroll)
+            minimum_bankroll = min(today_bankroll, minimum_bankroll)
+
+        predictions["Bankroll Progression"] = daily_starting_bankroll
+
+        profit = bankroll - initial_bankroll
+
+        formatted_initial_bankroll = self.to_currency_formatting(initial_bankroll)
+        formatted_bankroll = self.to_currency_formatting(bankroll)
+        formatted_profit = self.to_currency_formatting(profit)
+        formatted_minimum_bankroll = self.to_currency_formatting(minimum_bankroll)
+        formatted_maximum_bankroll = self.to_currency_formatting(maximum_bankroll)
+
+        predictions.to_csv(data_path)
+        print(f"Starting Bankroll: ${formatted_initial_bankroll}.")
+        print(f"End of Season Bankroll: ${formatted_bankroll}.")
+        print(f"Profit: ${formatted_profit}.")
+        print(f"Lowest Bankroll: ${formatted_minimum_bankroll} | Highest Bankroll: ${formatted_maximum_bankroll}")
+
+    @staticmethod
+    def to_currency_formatting(value):
+        desired_representation = "{:,}".format(value)
+        return desired_representation

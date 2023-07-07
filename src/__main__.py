@@ -30,9 +30,10 @@ def main():
     #     db_service.add_odds_data(odds_data)
 
     predictor = NbaPredictor(db_service, training_years)
-    predictor.train_model()
-
-    predictor.run_prediction_for_season(prediction_year)
+    # predictor.train_model()
+    #
+    # predictor.run_prediction_for_season(prediction_year)
+    predictor.check_profit(f'data/{prediction_year}_prediction.csv', float(1000), float(0.05), float(5))
     return
 
 
