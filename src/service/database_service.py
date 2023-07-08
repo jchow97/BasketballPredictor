@@ -44,7 +44,7 @@ class DatabaseService:
             away_team = teams[schedule_df['Visitor/Neutral'][i]]
             game = self.add_game(schedule_df, i, season, home_team, away_team)
 
-            game_summary, home_box, away_box = self.scraper.scrape_nba_match(game.game_code)
+            game_summary, home_box, away_box = self.scraper.scrape_nba_game(game.game_code)
 
             if game_summary is None:
                 continue

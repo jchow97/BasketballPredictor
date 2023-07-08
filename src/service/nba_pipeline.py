@@ -49,7 +49,7 @@ class NbaPredictor:
         """
         pipeline_inputs = []
         actual_outcomes = []
-        corresponding_matches = []
+        corresponding_games = []
 
         for year in years:
             season = self.db.get_season_by_year(year)
@@ -57,23 +57,23 @@ class NbaPredictor:
             teams: dict = self.create_teams(year)
             players: dict[NbaPlayer] = {}
             count = 0
-            for match in schedule:
+            for game in schedule:
                 if count <= 300:
                     count += 1
                     continue
                 if count > 1230:
                     break
                 # Get team game logs from database.
-                home_team_log, away_team_log = self.db.get_team_logs_by_game_id(match.id)
+                home_team_log, away_team_log = self.db.get_team_logs_by_game_id(game.id)
 
                 # Get Team objects from memory.
                 home_team_obj: NbaTeam = teams[f"{home_team_log.name}"]
                 away_team_obj: NbaTeam = teams[f"{away_team_log.name}"]
 
-                home_player_logs: list[GamePlayerLog] = self.db.get_player_logs_by_game_id_team_id(match.id,
-                                                                                                   match.home_team_id)
-                away_player_logs: list[GamePlayerLog] = self.db.get_player_logs_by_game_id_team_id(match.id,
-                                                                                                   match.away_team_id)
+                home_player_logs: list[GamePlayerLog] = self.db.get_player_logs_by_game_id_team_id(game.id,
+                                                                                                   game.home_team_id)
+                away_player_logs: list[GamePlayerLog] = self.db.get_player_logs_by_game_id_team_id(game.id,
+                                                                                                   game.away_team_id)
 
                 # Get features from team objects (before this game's stats).
                 features: list[float] = self.generate_features_differential(home_team_obj, away_team_obj)
@@ -88,7 +88,7 @@ class NbaPredictor:
 
                 pipeline_inputs.append(features)
                 actual_outcomes.append(total_points_differential)
-                corresponding_matches.append(match.game_code)
+                corresponding_games.append(game.game_code)
 
                 # Update team and player objects.
                 home_team_obj.update_features(home_team_log, away_team_log)
@@ -96,7 +96,7 @@ class NbaPredictor:
 
                 count += 1
 
-        return pipeline_inputs, actual_outcomes, corresponding_matches
+        return pipeline_inputs, actual_outcomes, corresponding_games
 
     def run_prediction_for_season(self, year: int):
         """
@@ -184,9 +184,9 @@ class NbaPredictor:
 
     def calculate_avg_bpm(self, player_logs, players: dict) -> float:
         """
-        Calculates the average box plus/minus differential of the players between two teams in a match.
+        Calculates the average box plus/minus differential of the players between two teams in a game.
         :param players: Dictionary of NbaPlayer objects.
-        :param player_logs: Team's player logs for the match.
+        :param player_logs: Team's player logs for the game.
         :return: float of the average box plus/minus.
         """
         pre_bpm_sum = 0.0

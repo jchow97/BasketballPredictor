@@ -16,7 +16,7 @@ class Scraper:
 
     Example of pages (links) that the scraper would like to scrape:
         NBA Schedule: f"https://www.basketball-reference.com/leagues/NBA_{year}_games-{month}.html"
-        Match/Box Score Page: f"https://www.basketball-reference.com/boxscores/{date}0{home_team_abrv}.html"
+        Game Box Score Page: f"https://www.basketball-reference.com/boxscores/{date}0{home_team_abrv}.html"
         Team Page: f"https://www.basketball-reference.com/teams/{team_abrv}/{year}.html"
         Player Page: f"https://www.basketball-reference.com/players/{last_initial}/{player_code}.html"
     """
@@ -30,7 +30,7 @@ class Scraper:
 
     def scrape_nba_seasons(self, seasons) -> None:
         """
-        Scrapes every specified NBA season (season, schedules, matches, teams, players).
+        Scrapes every specified NBA season (season, schedules, games, teams, players).
         :param seasons: list of seasons to scrape. Note: the 2021-2022 season would be season 2022.
         :return: None
         """
@@ -93,9 +93,9 @@ class Scraper:
             print(f"Failed to scrape {season} schedule.")
             return None
 
-    def scrape_nba_match(self, game_code, url=None) -> tuple[DataFrame, DataFrame, DataFrame] | None:
+    def scrape_nba_game(self, game_code, url=None) -> tuple[DataFrame, DataFrame, DataFrame] | None:
         """
-        Scrape the nba match and returns a collection of data frames from the match.
+        Scrape the nba game and returns a collection of data frames from the game.
         :param game_code: Unique game code string for the website.
         :param url: URL for specific game. Default is None. If specified, overrides specified game code.
         :return: List of game summary and box score data frames.
@@ -108,7 +108,7 @@ class Scraper:
             soup = self.send_request(url)
 
             if soup is None:
-                print("Something went wrong, can't scrape match.")
+                print("Something went wrong, can't scrape game.")
                 return None
 
         except HTTPError as e:
@@ -151,7 +151,7 @@ class Scraper:
 
             # Changed adv headers to be statically set here, rather than dynamically scraped because Play-In Game's
             # don't track BPM.
-            # TODO: (#8) Add dynamic handling for Play-In Games when scraping matches
+            # TODO: (#8) Add dynamic handling for Play-In Games when scraping games
 
             # if len(ls_headers) > 6:  # checking if there was OT need to make dynamic (e.g. 2OT, 3OT)
             #     i = len(ls_headers) - 6
@@ -269,7 +269,7 @@ class Scraper:
             soup = self.send_request(url)
 
             if soup is None:
-                print("Something went wrong, can't scrape match.")
+                print("Something went wrong, can't scrape game's odds data.")
                 return None
 
         except HTTPError as e:
@@ -454,7 +454,7 @@ class Scraper:
     def generate_boxscore_dataframes(basic_headers: list, basic_rows: list[list],
                                      advanced_headers: list, advanced_rows: list[list]) -> DataFrame:
 
-        # TODO: (#8) Add dynamic handling for Play-In Games when scraping matches
+        # TODO: (#8) Add dynamic handling for Play-In Games when scraping games
         if len(advanced_rows[0]) < 15:
             for row in advanced_rows:
                 row.append(None)
