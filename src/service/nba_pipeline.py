@@ -257,25 +257,43 @@ class NbaPredictor:
         maximum_bankroll = 0
         current_day = predictions.iloc[0]["Game Code"][:8]
         today_bankroll = initial_bankroll
+        plus_minus = []
+        max_loss_streak = 0
+        curr_loss_streak = 0
+        prev_result = "Push"
 
         for index, row in predictions.iterrows():
             game_day = row["Game Code"][:8]
 
             if game_day != current_day:
+                yesterday_bankroll = today_bankroll
+                plus_minus.append(bankroll - yesterday_bankroll)
                 current_day = game_day
                 today_bankroll = bankroll
+            else:
+                plus_minus.append(None)
 
             bet_amount = max(today_bankroll * unit_pct, min_unit)
             if row["Prediction Outcome"] == "Correct":
                 bankroll += ((bet_amount * 1.90) - bet_amount)
+                curr_loss_streak = 0
+                prev_result = "Correct"
             elif row["Prediction Outcome"] == "Incorrect":
                 bankroll -= bet_amount
+                if prev_result == "Incorrect" or prev_result == "Push":
+                    curr_loss_streak += 1
+                    max_loss_streak = max(max_loss_streak, curr_loss_streak)
+                prev_result = "Incorrect"
+            else:
+                prev_result = "Push"
+
             daily_starting_bankroll.append(today_bankroll)
 
             maximum_bankroll = max(today_bankroll, maximum_bankroll)
             minimum_bankroll = min(today_bankroll, minimum_bankroll)
 
         predictions["Bankroll Progression"] = daily_starting_bankroll
+        predictions["Plus_Minus"] = plus_minus
 
         profit = bankroll - initial_bankroll
 
@@ -290,6 +308,7 @@ class NbaPredictor:
         print(f"End of Season Bankroll: ${formatted_bankroll}.")
         print(f"Profit: ${formatted_profit}.")
         print(f"Lowest Bankroll: ${formatted_minimum_bankroll} | Highest Bankroll: ${formatted_maximum_bankroll}")
+        print(f"Max Loss Streak: {max_loss_streak}")
 
     @staticmethod
     def to_currency_formatting(value):
