@@ -108,32 +108,32 @@ class NbaTeam:
         self.mov_total += margin_of_victory
         self.mov = self.mov_total / self.games
 
-        # self.off_rtg_total += float(team_log.GameTeamLog.offensive_rating)
-        # self.off_rtg = self.off_rtg_total / self.games
-        #
-        # self.tov_pct_total += float(team_log.GameTeamLog.turnover_pct)
-        # self.tov_pct = self.tov_pct_total / self.games
-        #
-        # self.off_reb_total += float(team_log.GameTeamLog.offensive_rebounds)
-        # self.off_reb = self.off_reb_total / self.games
-        #
-        # self.ts_pct_total += float(team_log.GameTeamLog.true_shooting_pct)
-        # self.ts_pct = self.ts_pct_total / self.games
-        #
-        # self.def_rtg_total += float(team_log.GameTeamLog.defensive_rating)
-        # self.def_rtg = self.def_rtg_total / self.games
-        #
-        # self.def_reb_total += float(team_log.GameTeamLog.defensive_rebounds)
-        # self.def_reb = self.def_reb_total / self.games
-        #
-        # self.opp_tov_pct_total += float(opp_team_log.GameTeamLog.turnover_pct)
-        # self.opp_tov_pct = self.opp_tov_pct_total / self.games
-        #
-        # self.pace_total += float(team_log.GameTeamLog.pace)
-        # self.pace = self.pace_total / self.games
-        #
-        # # Only need to recalculate because add_last10() was already called earlier
-        # self.last10_pct = self.calculate_last10()
+        self.off_rtg_total += float(team_log.GameTeamLog.offensive_rating)
+        self.off_rtg = self.off_rtg_total / self.games
+
+        self.tov_pct_total += float(team_log.GameTeamLog.turnover_pct)
+        self.tov_pct = self.tov_pct_total / self.games
+
+        self.off_reb_total += float(team_log.GameTeamLog.offensive_rebounds)
+        self.off_reb = self.off_reb_total / self.games
+
+        self.ts_pct_total += float(team_log.GameTeamLog.true_shooting_pct)
+        self.ts_pct = self.ts_pct_total / self.games
+
+        self.def_rtg_total += float(team_log.GameTeamLog.defensive_rating)
+        self.def_rtg = self.def_rtg_total / self.games
+
+        self.def_reb_total += float(team_log.GameTeamLog.defensive_rebounds)
+        self.def_reb = self.def_reb_total / self.games
+
+        self.opp_tov_pct_total += float(opp_team_log.GameTeamLog.turnover_pct)
+        self.opp_tov_pct = self.opp_tov_pct_total / self.games
+
+        self.pace_total += float(team_log.GameTeamLog.pace)
+        self.pace = self.pace_total / self.games
+
+        # Only need to recalculate because add_last10() was already called earlier
+        self.last10_pct = self.calculate_last10()
 
         self.set_features()
 
