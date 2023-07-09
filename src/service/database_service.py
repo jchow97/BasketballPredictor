@@ -62,7 +62,9 @@ class DatabaseService:
         self.session.commit()
 
         for player in self.session.query(Player).all():
-            self.add_player_stats(player)
+            existing_stats = self.get_player_stats_by_player_id(player.id)
+            if existing_stats is None:
+                self.add_player_stats(player)
         self.session.commit()
 
     def add_types(self) -> None:
@@ -105,6 +107,10 @@ class DatabaseService:
         teams = {}
 
         for team in CURRENT_TEAMS:
+            #TODO:
+            exists = self.get_team_by_name_and_season_id(team, season_id)
+            if exists is not None:
+                continue
             season = self.session.query(Season.year).where(Season.id == season_id).one()[0]
             prev_year = str(int(season) - 1)
 
@@ -200,7 +206,9 @@ class DatabaseService:
         :return: season, schedule_df - Season object and the schedule dataframe.
         """
         schedule_df = self.scraper.scrape_nba_season(year)
-
+        exists = self.get_season_by_year(year)
+        if exists:
+            return exists, schedule_df
         season_start_date = self.scraper.to_postgres_date(schedule_df['Date'].iloc[0])
 
         season = Season(

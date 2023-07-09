@@ -58,10 +58,13 @@ class NbaPredictor:
             players: dict[NbaPlayer] = {}
             count = 0
             for game in schedule:
-                if count <= 300:
-                    count += 1
-                    continue
-                if count > 1230:
+                # Skipping the first 150 games so that each team has approximately player ~ 10 games.
+                # if count <= 150:
+                #     count += 1
+                #     continue
+
+                # There are 1230 regular season games in a season.
+                if count >= 1230:
                     break
                 # Get team game logs from database.
                 home_team_log, away_team_log = self.db.get_team_logs_by_game_id(game.id)
