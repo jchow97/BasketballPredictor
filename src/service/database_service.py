@@ -34,7 +34,12 @@ class DatabaseService:
         """
 
         self.add_types()
-        season, schedule_df = self.add_season(year)
+
+        schedule_df = self.scraper.scrape_nba_season(year)
+        season = self.get_season_by_year(year)
+        if not season:
+            season = self.add_season(year, schedule_df)
+
         teams = self.add_teams(season.id)
 
         for i in schedule_df.index:
@@ -199,16 +204,13 @@ class DatabaseService:
         return teams
 
     # noinspection PyTypeChecker
-    def add_season(self, year: int):
+    def add_season(self, year: int, schedule_df: pd.DataFrame) -> Season:
         """
         Adds season to the season db table.
+        :param schedule_df: Schedule dataframe
         :param year: Season to be added.
-        :return: season, schedule_df - Season object and the schedule dataframe.
+        :return: Returns the newly created Season object.
         """
-        schedule_df = self.scraper.scrape_nba_season(year)
-        exists = self.get_season_by_year(year)
-        if exists:
-            return exists, schedule_df
         season_start_date = self.scraper.to_postgres_date(schedule_df['Date'].iloc[0])
 
         season = Season(
@@ -219,7 +221,7 @@ class DatabaseService:
 
         self.session.add(season)
         self.session.flush()
-        return season, schedule_df
+        return season
 
     def add_player_stats(self, player: Player) -> None:
         """
