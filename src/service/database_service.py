@@ -103,105 +103,109 @@ class DatabaseService:
 
     def add_teams(self, season_id: int) -> dict[Team]:
         """
-        Populate the team tables with the current season's teams initialize their related tables
-        (team_stats, team_advanced_stats).
-        Team tables: team, team_stats, team_advanced_stats
+        Adds all teams in the league and their related team tables to the database.
         :param season_id:
         :return: None
         """
         teams = {}
-
         for team in CURRENT_TEAMS:
-            #TODO:
-            exists = self.get_team_by_name_and_season_id(team, season_id)
-            if exists is not None:
-                continue
-            season = self.session.query(Season.year).where(Season.id == season_id).one()[0]
-            prev_year = str(int(season) - 1)
-
-            t = Team(
-                season_id=season_id,
-                name=team,
-                abbreviation=TEAM_ABBRV[team],
-                friendly_name=f"{prev_year}-{season} {team}",
-
-                wins=0,
-                losses=0,
-                home_wins=0,
-                home_losses=0,
-                away_wins=0,
-                away_losses=0,
-                streak=0,
-                last_ten_wins=0,
-                last_ten_losses=0,
-
-                ats_wins=0,
-                ats_losses=0,
-                ats_ties=0,
-                ats_home_wins=0,
-                ats_home_losses=0,
-                ats_home_ties=0,
-                ats_away_wins=0,
-                ats_away_losses=0,
-                ats_away_ties=0
-            )
-            teams[team] = t
-            self.session.add(t)
-            self.session.flush()
-
-            for i in range(4):
-                ts = TeamStats(
-                    team_id=t.id,
-                    type=i + 1,
-                    minutes_played="",
-                    field_goals=0,
-                    field_goal_attempts=0,
-                    three_pointers=0,
-                    three_point_attempts=0,
-                    three_point_pct=0,
-                    two_pointers=0,
-                    two_point_attempts=0,
-                    two_point_pct=0,
-                    free_throws=0,
-                    free_throw_attempts=0,
-                    free_throw_pct=0,
-                    offensive_rebounds=0,
-                    defensive_rebounds=0,
-                    total_rebounds=0,
-                    assists=0,
-                    steals=0,
-                    blocks=0,
-                    turnovers=0,
-                    personal_fouls=0,
-                    points=0
-                )
-                self.session.add(ts)
-
-            tas = TeamAdvancedStats(
-                team_id=t.id,
-                wins=0,
-                losses=0,
-                pythagorean_wins=0,
-                pythagorean_losses=0,
-                margin_of_victory=0,
-                strength_of_schedule=0,
-                simple_rating_system=0,
-                offensive_rating=0,
-                defensive_rating=0,
-                pace=0,
-                free_throw_attempt_rate=0,
-                three_point_attempt_rate=0,
-                effective_field_goal_pct=0,
-                turnover_pct=0,
-                offensive_rebound_pct=0,
-                free_throws_per_field_goal_attempt=0,
-                opponent_effective_field_goal_pct=0,
-                opponent_turnover_pct=0,
-                defensive_rebound_pct=0,
-                defensive_free_throws_per_field_goal_attempt=0,
-            )
-            self.session.add(tas)
+            teams[team] = self.add_team(team, season_id)
         return teams
+
+    def add_team(self, name: str, season_id: int) -> Team:
+        """
+        Adds team and related tables to the database of the specified season including
+        (team, team_stats, team_advanced_stats)
+        :param name: Name of the team to be added.
+        :param season_id: Season id
+        :return: Returns the newly created team object
+        """
+        season_year = self.session.query(Season.year).where(Season.id == season_id).one()[0]
+        prev_year = str(int(season_year) - 1)
+
+        t = Team(
+            season_id=season_id,
+            name=name,
+            abbreviation=TEAM_ABBRV[name],
+            friendly_name=f"{prev_year}-{season_year} {name}",
+
+            wins=0,
+            losses=0,
+            home_wins=0,
+            home_losses=0,
+            away_wins=0,
+            away_losses=0,
+            streak=0,
+            last_ten_wins=0,
+            last_ten_losses=0,
+
+            ats_wins=0,
+            ats_losses=0,
+            ats_ties=0,
+            ats_home_wins=0,
+            ats_home_losses=0,
+            ats_home_ties=0,
+            ats_away_wins=0,
+            ats_away_losses=0,
+            ats_away_ties=0
+        )
+        self.session.add(t)
+        self.session.flush()
+
+        for i in range(4):
+            ts = TeamStats(
+                team_id=t.id,
+                type=i + 1,
+                minutes_played="",
+                field_goals=0,
+                field_goal_attempts=0,
+                three_pointers=0,
+                three_point_attempts=0,
+                three_point_pct=0,
+                two_pointers=0,
+                two_point_attempts=0,
+                two_point_pct=0,
+                free_throws=0,
+                free_throw_attempts=0,
+                free_throw_pct=0,
+                offensive_rebounds=0,
+                defensive_rebounds=0,
+                total_rebounds=0,
+                assists=0,
+                steals=0,
+                blocks=0,
+                turnovers=0,
+                personal_fouls=0,
+                points=0
+            )
+            self.session.add(ts)
+
+        tas = TeamAdvancedStats(
+            team_id=t.id,
+            wins=0,
+            losses=0,
+            pythagorean_wins=0,
+            pythagorean_losses=0,
+            margin_of_victory=0,
+            strength_of_schedule=0,
+            simple_rating_system=0,
+            offensive_rating=0,
+            defensive_rating=0,
+            pace=0,
+            free_throw_attempt_rate=0,
+            three_point_attempt_rate=0,
+            effective_field_goal_pct=0,
+            turnover_pct=0,
+            offensive_rebound_pct=0,
+            free_throws_per_field_goal_attempt=0,
+            opponent_effective_field_goal_pct=0,
+            opponent_turnover_pct=0,
+            defensive_rebound_pct=0,
+            defensive_free_throws_per_field_goal_attempt=0,
+        )
+        self.session.add(tas)
+
+        return t
 
     # noinspection PyTypeChecker
     def add_season(self, year: int, schedule_df: pd.DataFrame) -> Season:
