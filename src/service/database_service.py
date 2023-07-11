@@ -47,7 +47,13 @@ class DatabaseService:
                 continue
             home_team = teams[schedule_df['Home/Neutral'][i]]
             away_team = teams[schedule_df['Visitor/Neutral'][i]]
-            game = self.add_game(schedule_df, i, season, home_team, away_team)
+
+            game_datetime = self.scraper.to_postgres_datetime(schedule_df['Date'][i], schedule_df['Start (ET)'][i])
+            game_code = self.scraper.get_game_code(schedule_df['Date'][i], home_team.abbreviation)
+
+            game = self.get_game_by_game_code(game_code)
+            if not game:
+                game = self.add_game(game_datetime, game_code, season, home_team, away_team)
 
             game_summary, home_box, away_box = self.scraper.scrape_nba_game(game.game_code)
 
@@ -109,7 +115,10 @@ class DatabaseService:
         """
         teams = {}
         for team in CURRENT_TEAMS:
-            teams[team] = self.add_team(team, season_id)
+            team_obj = self.get_team_by_name_and_season_id(team, season_id)
+            if team_obj is None:
+                team_obj = self.add_team(team, season_id)
+            teams[team] = team_obj
         return teams
 
     def add_team(self, name: str, season_id: int) -> Team:
@@ -479,20 +488,17 @@ class DatabaseService:
         self.session.add(game_player_log)
 
     # noinspection PyTypeChecker
-    def add_game(self, schedule: pd.DataFrame, i: int, season: Season, home_team: Team, away_team: Team) -> Game:
+    def add_game(self, game_datetime: str, game_code: str, season: Season, home_team: Team, away_team: Team) -> Game:
         """
         Add a game to the game database table.
         :param away_team: Away team object.
         :param home_team: Home team object.
-        :param schedule: Schedule dataframe.
-        :param i: Index to look at
+        :param game_datetime: Postgres formatted Datetime string
+        :param game_code: Game Code string
         :param season: Related Season object.
         :return: Newly created Game object.
         """
         # Create game object
-        game_datetime = self.scraper.to_postgres_datetime(schedule['Date'][i], schedule['Start (ET)'][i])
-        game_code = self.scraper.get_game_code(schedule['Date'][i], home_team.abbreviation)
-
         # TODO: (#3) Correct assignment of game types.
         game = Game(
             season_id=season.id,
@@ -554,16 +560,16 @@ class DatabaseService:
 
         return query
 
-    def get_game_by_game_code(self, game_code: str) -> list[Game]:
+    def get_game_by_game_code(self, game_code: str) -> Game:
         """
         Retrieves a game from the database.
         :param game_code: Unique game code
         :return: List of games
         """
-        query: list[Game] = self.session \
+        query: Game = self.session \
             .query(Game) \
             .where(Game.game_code == game_code) \
-            .all()
+            .one_or_none()
 
         return query
 
@@ -622,10 +628,6 @@ class DatabaseService:
             .where(Team.season_id == season_id)\
             .where(Team.name == team)\
             .one_or_none()
-
-        if query is None:
-            # TODO: Handle none case.
-            pass
 
         return query
 
