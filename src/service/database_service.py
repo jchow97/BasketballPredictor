@@ -34,7 +34,12 @@ class DatabaseService:
         """
 
         self.add_types()
-        season, schedule_df = self.add_season(year)
+
+        schedule_df = self.scraper.scrape_nba_season(year)
+        season = self.get_season_by_year(year)
+        if not season:
+            season = self.add_season(year, schedule_df)
+
         teams = self.add_teams(season.id)
 
         for i in schedule_df.index:
@@ -42,7 +47,13 @@ class DatabaseService:
                 continue
             home_team = teams[schedule_df['Home/Neutral'][i]]
             away_team = teams[schedule_df['Visitor/Neutral'][i]]
-            game = self.add_game(schedule_df, i, season, home_team, away_team)
+
+            game_datetime = self.scraper.to_postgres_datetime(schedule_df['Date'][i], schedule_df['Start (ET)'][i])
+            game_code = self.scraper.get_game_code(schedule_df['Date'][i], home_team.abbreviation)
+
+            game = self.get_game_by_game_code(game_code)
+            if not game:
+                game = self.add_game(game_datetime, game_code, season, home_team, away_team)
 
             game_summary, home_box, away_box = self.scraper.scrape_nba_game(game.game_code)
 
@@ -98,117 +109,121 @@ class DatabaseService:
 
     def add_teams(self, season_id: int) -> dict[Team]:
         """
-        Populate the team tables with the current season's teams initialize their related tables
-        (team_stats, team_advanced_stats).
-        Team tables: team, team_stats, team_advanced_stats
+        Adds all teams in the league and their related team tables to the database.
         :param season_id:
         :return: None
         """
         teams = {}
-
         for team in CURRENT_TEAMS:
-            #TODO:
-            exists = self.get_team_by_name_and_season_id(team, season_id)
-            if exists is not None:
-                continue
-            season = self.session.query(Season.year).where(Season.id == season_id).one()[0]
-            prev_year = str(int(season) - 1)
-
-            t = Team(
-                season_id=season_id,
-                name=team,
-                abbreviation=TEAM_ABBRV[team],
-                friendly_name=f"{prev_year}-{season} {team}",
-
-                wins=0,
-                losses=0,
-                home_wins=0,
-                home_losses=0,
-                away_wins=0,
-                away_losses=0,
-                streak=0,
-                last_ten_wins=0,
-                last_ten_losses=0,
-
-                ats_wins=0,
-                ats_losses=0,
-                ats_ties=0,
-                ats_home_wins=0,
-                ats_home_losses=0,
-                ats_home_ties=0,
-                ats_away_wins=0,
-                ats_away_losses=0,
-                ats_away_ties=0
-            )
-            teams[team] = t
-            self.session.add(t)
-            self.session.flush()
-
-            for i in range(4):
-                ts = TeamStats(
-                    team_id=t.id,
-                    type=i + 1,
-                    minutes_played="",
-                    field_goals=0,
-                    field_goal_attempts=0,
-                    three_pointers=0,
-                    three_point_attempts=0,
-                    three_point_pct=0,
-                    two_pointers=0,
-                    two_point_attempts=0,
-                    two_point_pct=0,
-                    free_throws=0,
-                    free_throw_attempts=0,
-                    free_throw_pct=0,
-                    offensive_rebounds=0,
-                    defensive_rebounds=0,
-                    total_rebounds=0,
-                    assists=0,
-                    steals=0,
-                    blocks=0,
-                    turnovers=0,
-                    personal_fouls=0,
-                    points=0
-                )
-                self.session.add(ts)
-
-            tas = TeamAdvancedStats(
-                team_id=t.id,
-                wins=0,
-                losses=0,
-                pythagorean_wins=0,
-                pythagorean_losses=0,
-                margin_of_victory=0,
-                strength_of_schedule=0,
-                simple_rating_system=0,
-                offensive_rating=0,
-                defensive_rating=0,
-                pace=0,
-                free_throw_attempt_rate=0,
-                three_point_attempt_rate=0,
-                effective_field_goal_pct=0,
-                turnover_pct=0,
-                offensive_rebound_pct=0,
-                free_throws_per_field_goal_attempt=0,
-                opponent_effective_field_goal_pct=0,
-                opponent_turnover_pct=0,
-                defensive_rebound_pct=0,
-                defensive_free_throws_per_field_goal_attempt=0,
-            )
-            self.session.add(tas)
+            team_obj = self.get_team_by_name_and_season_id(team, season_id)
+            if team_obj is None:
+                team_obj = self.add_team(team, season_id)
+            teams[team] = team_obj
         return teams
 
+    def add_team(self, name: str, season_id: int) -> Team:
+        """
+        Adds team and related tables to the database of the specified season including
+        (team, team_stats, team_advanced_stats)
+        :param name: Name of the team to be added.
+        :param season_id: Season id
+        :return: Returns the newly created team object
+        """
+        season_year = self.session.query(Season.year).where(Season.id == season_id).one()[0]
+        prev_year = str(int(season_year) - 1)
+
+        t = Team(
+            season_id=season_id,
+            name=name,
+            abbreviation=TEAM_ABBRV[name],
+            friendly_name=f"{prev_year}-{season_year} {name}",
+
+            wins=0,
+            losses=0,
+            home_wins=0,
+            home_losses=0,
+            away_wins=0,
+            away_losses=0,
+            streak=0,
+            last_ten_wins=0,
+            last_ten_losses=0,
+
+            ats_wins=0,
+            ats_losses=0,
+            ats_ties=0,
+            ats_home_wins=0,
+            ats_home_losses=0,
+            ats_home_ties=0,
+            ats_away_wins=0,
+            ats_away_losses=0,
+            ats_away_ties=0
+        )
+        self.session.add(t)
+        self.session.flush()
+
+        for i in range(4):
+            ts = TeamStats(
+                team_id=t.id,
+                type=i + 1,
+                minutes_played="",
+                field_goals=0,
+                field_goal_attempts=0,
+                three_pointers=0,
+                three_point_attempts=0,
+                three_point_pct=0,
+                two_pointers=0,
+                two_point_attempts=0,
+                two_point_pct=0,
+                free_throws=0,
+                free_throw_attempts=0,
+                free_throw_pct=0,
+                offensive_rebounds=0,
+                defensive_rebounds=0,
+                total_rebounds=0,
+                assists=0,
+                steals=0,
+                blocks=0,
+                turnovers=0,
+                personal_fouls=0,
+                points=0
+            )
+            self.session.add(ts)
+
+        tas = TeamAdvancedStats(
+            team_id=t.id,
+            wins=0,
+            losses=0,
+            pythagorean_wins=0,
+            pythagorean_losses=0,
+            margin_of_victory=0,
+            strength_of_schedule=0,
+            simple_rating_system=0,
+            offensive_rating=0,
+            defensive_rating=0,
+            pace=0,
+            free_throw_attempt_rate=0,
+            three_point_attempt_rate=0,
+            effective_field_goal_pct=0,
+            turnover_pct=0,
+            offensive_rebound_pct=0,
+            free_throws_per_field_goal_attempt=0,
+            opponent_effective_field_goal_pct=0,
+            opponent_turnover_pct=0,
+            defensive_rebound_pct=0,
+            defensive_free_throws_per_field_goal_attempt=0,
+        )
+        self.session.add(tas)
+
+        return t
+
     # noinspection PyTypeChecker
-    def add_season(self, year: int):
+    def add_season(self, year: int, schedule_df: pd.DataFrame) -> Season:
         """
         Adds season to the season db table.
+        :param schedule_df: Schedule dataframe
         :param year: Season to be added.
-        :return: season, schedule_df - Season object and the schedule dataframe.
+        :return: Returns the newly created Season object.
         """
-        schedule_df = self.scraper.scrape_nba_season(year)
-        exists = self.get_season_by_year(year)
-        if exists:
-            return exists, schedule_df
         season_start_date = self.scraper.to_postgres_date(schedule_df['Date'].iloc[0])
 
         season = Season(
@@ -219,7 +234,7 @@ class DatabaseService:
 
         self.session.add(season)
         self.session.flush()
-        return season, schedule_df
+        return season
 
     def add_player_stats(self, player: Player) -> None:
         """
@@ -473,20 +488,17 @@ class DatabaseService:
         self.session.add(game_player_log)
 
     # noinspection PyTypeChecker
-    def add_game(self, schedule: pd.DataFrame, i: int, season: Season, home_team: Team, away_team: Team) -> Game:
+    def add_game(self, game_datetime: str, game_code: str, season: Season, home_team: Team, away_team: Team) -> Game:
         """
         Add a game to the game database table.
         :param away_team: Away team object.
         :param home_team: Home team object.
-        :param schedule: Schedule dataframe.
-        :param i: Index to look at
+        :param game_datetime: Postgres formatted Datetime string
+        :param game_code: Game Code string
         :param season: Related Season object.
         :return: Newly created Game object.
         """
         # Create game object
-        game_datetime = self.scraper.to_postgres_datetime(schedule['Date'][i], schedule['Start (ET)'][i])
-        game_code = self.scraper.get_game_code(schedule['Date'][i], home_team.abbreviation)
-
         # TODO: (#3) Correct assignment of game types.
         game = Game(
             season_id=season.id,
@@ -548,16 +560,16 @@ class DatabaseService:
 
         return query
 
-    def get_game_by_game_code(self, game_code: str) -> list[Game]:
+    def get_game_by_game_code(self, game_code: str) -> Game:
         """
         Retrieves a game from the database.
         :param game_code: Unique game code
         :return: List of games
         """
-        query: list[Game] = self.session \
+        query: Game = self.session \
             .query(Game) \
             .where(Game.game_code == game_code) \
-            .all()
+            .one_or_none()
 
         return query
 
@@ -616,10 +628,6 @@ class DatabaseService:
             .where(Team.season_id == season_id)\
             .where(Team.name == team)\
             .one_or_none()
-
-        if query is None:
-            # TODO: Handle none case.
-            pass
 
         return query
 
