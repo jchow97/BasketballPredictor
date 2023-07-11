@@ -4,7 +4,7 @@ import pandas as pd
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 from sqlalchemy.engine.row import Row
-from common.constants import CURRENT_TEAMS, TEAM_ABBRV
+from common.constants import TEAMS_CURRENT, TEAM_ABBRV
 from models.database import Base, Player, GameType, PlayerStatsType, \
     TeamStatsType, Season, Team, TeamStats, TeamAdvancedStats, PlayerStats, Game, GameTeamLog, PlayerTeam, \
     GamePlayerLog
@@ -114,7 +114,7 @@ class DatabaseService:
         :return: None
         """
         teams = {}
-        for team in CURRENT_TEAMS:
+        for team in TEAMS_CURRENT:
             team_obj = self.get_team_by_name_and_season_id(team, season_id)
             if team_obj is None:
                 team_obj = self.add_team(team, season_id)

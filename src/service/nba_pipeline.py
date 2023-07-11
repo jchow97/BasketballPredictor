@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 
-from common.constants import CURRENT_TEAMS
+from common.constants import TEAMS_CURRENT
 from models.database import GamePlayerLog
 from models.nba_player import NbaPlayer
 from models.nba_team import NbaTeam
@@ -239,7 +239,7 @@ class NbaPredictor:
         :return: Dictionary of NBA teams (season unique).
         """
         teams = {}
-        for team in CURRENT_TEAMS:
+        for team in TEAMS_CURRENT:
             teams[team] = NbaTeam(team, year)
             print(f'{team} created.')
         return teams

@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import numpy as np
 
-from common.constants import CURRENT_TEAMS
+from common.constants import TEAMS_CURRENT
 from service.nba_pipeline import NbaPredictor
 
 
@@ -25,6 +25,6 @@ class TestNbaPipeline(unittest.TestCase):
     def test_create_teams(self):
         test_teams = self.test_nba_predictor.create_teams(2023)
 
-        for name in CURRENT_TEAMS:
+        for name in TEAMS_CURRENT:
             self.assertEqual(name, test_teams[name].team_name)
             self.assertEqual(2023, test_teams[name].season)

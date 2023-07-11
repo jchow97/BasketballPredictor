@@ -66,7 +66,7 @@ MONTHS_ABBRV = {
     'Dec': '12'
 }
 
-CURRENT_TEAMS = (
+TEAMS_CURRENT = (
     'Atlanta Hawks',
     'Boston Celtics',
     'Brooklyn Nets',
@@ -97,6 +97,71 @@ CURRENT_TEAMS = (
     'Toronto Raptors',
     'Utah Jazz',
     'Washington Wizards')
+
+TEAMS_PRE_2013 = (
+    'Atlanta Hawks',
+    'Boston Celtics',
+    'Charlotte Hornets',
+    'Chicago Bulls',
+    'Cleveland Cavaliers',
+    'Dallas Mavericks',
+    'Denver Nuggets',
+    'Detroit Pistons',
+    'Houston Rockets',
+    'Indiana Pacers',
+    'Los Angeles Lakers',
+    'Los Angeles Clippers',
+    'Memphis Grizzlies',
+    'Miami Heat',
+    'Milwaukee Bucks',
+    'Minnesota Timberwolves',
+    'New Jersey Nets'
+    'New Orleans Pelicans',
+    'New York Knicks',
+    'Golden State Warriors',
+    'Oklahoma City Thunder',
+    'Orlando Magic',
+    'Philadelphia 76ers',
+    'Phoenix Suns',
+    'Portland Trail Blazers',
+    'Sacramento Kings',
+    'San Antonio Spurs',
+    'Toronto Raptors',
+    'Utah Jazz',
+    'Washington Wizards')
+
+TEAMS_2008 = (
+    'Atlanta Hawks',
+    'Boston Celtics',
+    'Charlotte Hornets',
+    'Chicago Bulls',
+    'Cleveland Cavaliers',
+    'Dallas Mavericks',
+    'Denver Nuggets',
+    'Detroit Pistons',
+    'Houston Rockets',
+    'Indiana Pacers',
+    'Los Angeles Lakers',
+    'Los Angeles Clippers',
+    'Memphis Grizzlies',
+    'Miami Heat',
+    'Milwaukee Bucks',
+    'Minnesota Timberwolves',
+    'New Jersey Nets'
+    'New Orleans Pelicans',
+    'New York Knicks',
+    'Golden State Warriors',
+    'Orlando Magic',
+    'Philadelphia 76ers',
+    'Phoenix Suns',
+    'Portland Trail Blazers',
+    'Sacramento Kings',
+    'San Antonio Spurs',
+    'Seattle Supersonics',
+    'Toronto Raptors',
+    'Utah Jazz',
+    'Washington Wizards')
+
 
 # Current teams only. Golden state is duped because of bad data.
 CITY_NAME_TO_PROPER = {
