@@ -35,48 +35,48 @@ class DatabaseService:
 
         self.add_types()
 
-        schedule_df = self.scraper.scrape_nba_season(year)
         season = self.get_season_by_year(year)
         if not season:
+            schedule_df = self.scraper.scrape_nba_season(year)
             season = self.add_season(year, schedule_df)
 
-        teams = self.add_teams(season.id)
+            teams = self.add_teams(season.id)
 
-        for i in schedule_df.index:
-            if teams.get(schedule_df['Home/Neutral'][i], None) is None:
-                continue
-            home_team = teams[schedule_df['Home/Neutral'][i]]
-            away_team = teams[schedule_df['Visitor/Neutral'][i]]
+            for i in schedule_df.index:
+                if teams.get(schedule_df['Home/Neutral'][i], None) is None:
+                    continue
+                home_team = teams[schedule_df['Home/Neutral'][i]]
+                away_team = teams[schedule_df['Visitor/Neutral'][i]]
 
-            game_datetime = self.scraper.to_postgres_datetime(schedule_df['Date'][i], schedule_df['Start (ET)'][i])
-            game_code = self.scraper.get_game_code(schedule_df['Date'][i], home_team.abbreviation)
+                game_datetime = self.scraper.to_postgres_datetime(schedule_df['Date'][i], schedule_df['Start (ET)'][i])
+                game_code = self.scraper.get_game_code(schedule_df['Date'][i], home_team.abbreviation)
 
-            game = self.get_game_by_game_code(game_code)
-            if not game:
-                game = self.add_game(game_datetime, game_code, season, home_team, away_team)
+                game = self.get_game_by_game_code(game_code)
+                if not game:
+                    game = self.add_game(game_datetime, game_code, season, home_team, away_team)
 
-            game_summary, home_box, away_box = self.scraper.scrape_nba_game(game.game_code)
+                game_summary, home_box, away_box = self.scraper.scrape_nba_game(game.game_code)
 
-            if game_summary is None:
-                continue
+                if game_summary is None:
+                    continue
 
-            home_box_team_stats = home_box.iloc[-1]
-            home_team_game_summary = game_summary.iloc[1]
-            away_box_team_stats = away_box.iloc[-1]
-            away_team_game_summary = game_summary.iloc[0]
+                home_box_team_stats = home_box.iloc[-1]
+                home_team_game_summary = game_summary.iloc[1]
+                away_box_team_stats = away_box.iloc[-1]
+                away_team_game_summary = game_summary.iloc[0]
 
-            self.add_game_team_log(game, home_team, home_team_game_summary, home_box_team_stats)
-            self.add_game_player_logs(game, home_team, home_box)
-            self.add_game_team_log(game, away_team, away_team_game_summary, away_box_team_stats)
-            self.add_game_player_logs(game, away_team, away_box)
-            
-        self.session.commit()
+                self.add_game_team_log(game, home_team, home_team_game_summary, home_box_team_stats)
+                self.add_game_player_logs(game, home_team, home_box)
+                self.add_game_team_log(game, away_team, away_team_game_summary, away_box_team_stats)
+                self.add_game_player_logs(game, away_team, away_box)
 
-        for player in self.session.query(Player).all():
-            existing_stats = self.get_player_stats_by_player_id(player.id)
-            if existing_stats is None:
-                self.add_player_stats(player)
-        self.session.commit()
+            self.session.commit()
+
+            for player in self.session.query(Player).all():
+                existing_stats = self.get_player_stats_by_player_id(player.id)
+                if existing_stats is None:
+                    self.add_player_stats(player)
+            self.session.commit()
 
     def add_types(self) -> None:
         """
