@@ -12,7 +12,7 @@ database = 'nba_test'
 
 def main():
     # Set Parameters
-    scrape_years = range(2013, 2023)
+    scrape_years = range(2015, 2023)
     training_years = [2017, 2018, 2019, 2021]
     prediction_year = 2022
 
@@ -22,7 +22,7 @@ def main():
     db_service = DatabaseService(session, scraper, engine)
 
     # Scraper-related methods; uncomment if we need to re-initialize the database.
-    db_service.initialize_database()
+    # db_service.initialize_database()
     for year in scrape_years:
         db_service.populate_tables(year)
         odds_data: pd.DataFrame = scraper.scrape_odds_data(year)
