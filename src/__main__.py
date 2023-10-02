@@ -23,18 +23,18 @@ def main():
 
     # Scraper-related methods; uncomment if we need to re-initialize the database.
     # db_service.initialize_database()
-    for year in scrape_years:
-        db_service.populate_tables(year)
-        odds_data: pd.DataFrame = scraper.scrape_odds_data(year)
-        if odds_data is None:
-            continue
-        db_service.add_odds_data(odds_data)
+    # for year in scrape_years:
+    #     db_service.populate_tables(year)
+    #     odds_data: pd.DataFrame = scraper.scrape_odds_data(year)
+    #     if odds_data is None:
+    #         continue
+    #     db_service.add_odds_data(odds_data)
 
-    # predictor = NbaPredictor(db_service, training_years)
-    # predictor.train_model()
-    #
-    # predictor.run_prediction_for_season(prediction_year)
-    # predictor.check_profit(f'data/{prediction_year}_prediction.csv', float(1000), float(0.05), float(5))
+    predictor = NbaPredictor(db_service, training_years)
+    predictor.train_model()
+
+    predictor.run_prediction_for_season(prediction_year)
+    predictor.check_profit(f'data/{prediction_year}_prediction.csv', float(1000), float(0.05), float(5))
     return
 
 
